@@ -28,7 +28,7 @@ public class TFTPClient {
       }
    }
 
-   public void sendAndReceive(int type, String filename, String dataType)
+   public void sendAndReceive()
    {
       byte[] msg = new byte[100], // message we send
              fn, // filename as an array of bytes
