@@ -7,16 +7,16 @@ import java.net.SocketException;
 public class TFTPServerThread extends Thread {
 	private DatagramPacket sendPacket, receivePacket;
 	private DatagramSocket sendReceiveSocket;
-	public static enum Request { READ, WRITE, ERROR};
+	//public static enum Request { READ, WRITE, ERROR};
 	public static final byte[] readResp = {0, 3, 0, 1};
 	public static final byte[] writeResp = {0, 4, 0, 0};
 	byte[] data, response = new byte[4];
-	Request req; // READ, WRITE or ERROR
+	String req; // READ, WRITE or ERROR
 	int len;
 	String filename,mode;
 	int j,k;
 
-	TFTPServerThread(byte[] _data, Request _req, int _len) {
+	TFTPServerThread(byte[] _data, String _req, int _len) {
 		data = _data;
 		req = _req;
 		len = _len;
@@ -26,39 +26,40 @@ public class TFTPServerThread extends Thread {
         // If it's a write, send back ACK (04) block 0
         // Otherwise, ignore it
 		
-        if (data[0]!=0) req = Request.ERROR; // bad
-        else if (data[1]==1) req = Request.READ; // could be read
-        else if (data[1]==2) req = Request.WRITE; // could be write
-        else req = Request.ERROR; // bad
-
-        if (req!=Request.ERROR) { // check for filename
-            // search for next all 0 byte
-        	
-            for(j=2;j<len;j++) {
-                if (data[j] == 0) break;
-           }
-           if (j==len) req=Request.ERROR; // didn't find a 0 byte
-           if (j==2) req=Request.ERROR; // filename is 0 bytes long
-           // otherwise, extract filename
-           filename = new String(data,2,j-2);
-        }
-
-        if(req!=Request.ERROR) { // check for mode
-            // search for next all 0 byte
-            for(k=j+1;k<len;k++) { 
-                if (data[k] == 0) break;
-           }
-           if (k==len) req=Request.ERROR; // didn't find a 0 byte
-           if (k==j+1) req=Request.ERROR; // mode is 0 bytes long
-           mode = new String(data,j,k-j-1);
-        }
+//        if (data[0]!=0) req = "error"; // bad
+//        else if (data[1]==1) req = "read"; // could be read
+//        else if (data[1]==2) req = "write"; // could be write
+//        else req = "error"; // bad
+//
+//        if (req!="error") { // check for filename
+//            // search for next all 0 byte
+//        	
+//            for(j=2;j<len;j++) {
+//                if (data[j] == 0) break;
+//           }
+//           if (j==len) req="error"; // didn't find a 0 byte
+//           if (j==2) req="error"; // filename is 0 bytes long
+//           // otherwise, extract filename
+//           filename = new String(data,2,j-2);
+//        }
+//
+//        if(req!="error") { // check for mode
+//            // search for next all 0 byte
+//            for(k=j+1;k<len;k++) { 
+//                if (data[k] == 0) break;
+//           }
+//           if (k==len) req="error"; // didn't find a 0 byte
+//           if (k==j+1) req="error"; // mode is 0 bytes long
+//           mode = new String(data,j,k-j-1);
+//        }
+//        
+//        if(k!=len-1) req="error"; // other stuff at end of packet   
         
-        if(k!=len-1) req=Request.ERROR; // other stuff at end of packet        
         
         // Create a response.
-        if (req==Request.READ) { // for Read it's 0301
+        if (req=="read") { // for Read it's 0301
            response = readResp;
-        } else if (req==Request.WRITE) { // for Write it's 0400
+        } else if (req=="write") { // for Write it's 0400
            response = writeResp;
         } else { // it was invalid, close socket on port 69 (so things work properly next time) and quit
            sendReceiveSocket.close();
