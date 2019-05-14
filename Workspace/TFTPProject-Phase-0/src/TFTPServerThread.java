@@ -16,7 +16,8 @@ public class TFTPServerThread extends Thread {
 	String filename,mode;
 	int j,k;
 
-	TFTPServerThread(byte[] _data, String _req, int _len) {
+	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len) {
+		receivePacket = _receivePacket;
 		data = _data;
 		req = _req;
 		len = _len;
@@ -125,7 +126,7 @@ public class TFTPServerThread extends Thread {
         System.out.println();
 
         // We're finished with this socket, so close it.
-        sendReceiveSocket.close();
+        //sendReceiveSocket.close();
      } // end of loop
 }
 	

@@ -152,9 +152,6 @@ public class TFTPClient {
        
        System.out.println();
 
-
-      // We're finished, so close the socket.
-      sendReceiveSocket.close();
    }
 
    public static void main(String args[]) // TURN THIS AREA INTO THE UI
@@ -163,13 +160,13 @@ public class TFTPClient {
 	   TFTPClient c = new TFTPClient();
 	  	//send 10 alternating test read/write requests
 	  	for(int i = 0; i < 5; i++) {
-	  		c.sendAndReceive(1, "test.txt", "netascii", 0);
+	  		c.sendAndReceive(1, "test.txt", "netascii", 1);
 	  		
-	  		c.sendAndReceive(2, "test2.txt", "ocTEt", 0);
+	  		c.sendAndReceive(2, "test2.txt", "ocTEt", 1);
 	  	}
 	  	
 	  	//send an invalid request
-	  	c.sendAndReceive(7, "test.txt", "netascii", 0);
+	  	c.sendAndReceive(7, "test.txt", "netascii", 1);
 	  	
 	  	//Close the client
 	  	//c.close();

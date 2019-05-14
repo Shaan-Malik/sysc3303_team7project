@@ -102,7 +102,8 @@ public class TFTPServer {
          
          if(k!=len-1) req="error"; // other stuff at end of packet   
          
-         TFTPServerThread t = new TFTPServerThread(data, req, len);
+         TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len);
+         t.start();
       }
 
          
