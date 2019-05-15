@@ -4,6 +4,7 @@
 // the appropriate response from the server.  No actual file transfer takes place.   
 
 import java.io.*;
+import java.util.Scanner;
 import java.net.*;
 
 public class TFTPClient {
@@ -24,7 +25,7 @@ public class TFTPClient {
       }
    }
 
-   public void sendAndReceive(int type, String filename, String dataType, int mode)
+   public void sendAndReceive(int type, String filename, String dataType, String outputMode, int testMode)
    {
       byte[] msg = new byte[100], // message we send
              fn, // filename as an array of bytes
@@ -40,13 +41,14 @@ public class TFTPClient {
       // that test vs. normal will be entered by the user.
       // change to NORMAL to send directly to server
       
-      if (mode == 0) //Mode 0 is Normal, 1 is Testing
+      if (testMode == 0) //Mode 0 is Normal, 1 is Testing
          sendPort = 69;
       else
          sendPort = 23;
 
-      
-        System.out.println("Client: creating packet:");
+      if (outputMode.equals("verbose")) {
+    	  System.out.println("Client: creating packet:");
+      }
          
         // Prepare a DatagramPacket and send it via sendReceiveSocket
         // to sendPort on the destination host (also on this machine).
@@ -104,16 +106,18 @@ public class TFTPClient {
           e.printStackTrace();
           System.exit(1);
        }
-       
-       System.out.println("Client: sending packet ");
-       System.out.println("To host: " + sendPacket.getAddress());
-       System.out.println("Destination host port: " + sendPacket.getPort());
-       len = sendPacket.getLength();
-       System.out.println("Length: " + len);
-       System.out.println("Containing: ");
-       for (j=0;j<len;j++) {
-           System.out.println("byte " + j + " " + msg[j]);
+       if (outputMode.equals("verbose")) {
+    	   System.out.println("Client: sending packet ");
+           System.out.println("To host: " + sendPacket.getAddress());
+           System.out.println("Destination host port: " + sendPacket.getPort());
+           len = sendPacket.getLength();
+           System.out.println("Length: " + len);
+           System.out.println("Containing: ");
+           for (j=0;j<len;j++) {
+               System.out.println("byte " + j + " " + msg[j]);
+           }
        }
+       
        
        // Form a String from the byte array, and print the string.
        String sending = new String(msg,0,len);
@@ -126,12 +130,16 @@ public class TFTPClient {
           e.printStackTrace();
           System.exit(1);
        }
-       System.out.println("Client: Packet sent.");
+       if (outputMode.equals("verbose")) {
+    	   System.out.println("Client: Packet sent.");
+       }
        // Construct a DatagramPacket for receiving packets up
        // to 100 bytes long (the length of the byte array).
        data = new byte[100];
        receivePacket = new DatagramPacket(data, data.length);
-       System.out.println("Client: Waiting for packet.");
+       if (outputMode.equals("verbose")) {
+    	   System.out.println("Client: Waiting for packet.");
+       }
        try {
           // Block until a datagram is received via sendReceiveSocket.
           sendReceiveSocket.receive(receivePacket);
@@ -140,36 +148,92 @@ public class TFTPClient {
           System.exit(1);
        }
        // Process the received datagram.
-       System.out.println("Client: Packet received:");
-       System.out.println("From host: " + receivePacket.getAddress());
-       System.out.println("Host port: " + receivePacket.getPort());
-       len = receivePacket.getLength();
-       System.out.println("Length: " + len);
-       System.out.println("Containing: ");
-       for (j=0;j<len;j++) {
-           System.out.println("byte " + j + " " + data[j]);
+       
+       if (outputMode.equals("verbose")) {
+    	   System.out.println("Client: Packet received:");
+           System.out.println("From host: " + receivePacket.getAddress());
+           System.out.println("Host port: " + receivePacket.getPort());
+           len = receivePacket.getLength();
+           System.out.println("Length: " + len);
+           System.out.println("Containing: ");
+           
+           for (j=0;j<len;j++) {
+               System.out.println("byte " + j + " " + data[j]);
+           }
+           System.out.println();
        }
        
-       System.out.println();
-
+      // We're finished, so close the socket.
+      sendReceiveSocket.close();
    }
 
    public static void main(String args[]) // TURN THIS AREA INTO THE UI
    {
-	// sends 10 packets -- 5 reads, 5 writes, 1 invalid
 	   TFTPClient c = new TFTPClient();
+	   Scanner scan = new Scanner(System.in);
+	   while (true) {
+		   System.out.println("Enter a command: ");
+		   String s = scan.next();
+		   if (s.equals("start")) {
+			   System.out.println("Read or Write request?");
+			   String request = scan.next();
+			   int type;
+			   if (request.equals("read")) {
+				   type = 1;
+			   }
+			   else if (request.equals("write")) {
+				   type = 2;
+			   }
+			   else {
+				   System.out.println("Invalid request type");
+				   continue;
+			   }
+			   System.out.println("Enter Filename: ");
+			   String filename = scan.next();
+			   System.out.println("Enter data type (octet or netascii): ");
+			   String datatype = scan.next();
+			   if (!((datatype.equals("octet")) || (datatype.equals("netascii")))) {
+				   System.out.println("Invalid data type");
+				   continue;
+			   }
+			   System.out.println("Enter quiet or verbose mode: ");
+			   String outputMode = scan.next();
+			   if (!((outputMode.equals("quiet")) || (outputMode.equals("verbose")))){
+				   System.out.println("Invalid mode");
+				   continue;
+			   }
+			   System.out.println("Enter normal or test mode: ");
+			   String testModeString = scan.next();
+			   int testModeInt;
+			   if (testModeString.equals("normal")) {
+				   testModeInt = 0;
+			   }
+			   else if (testModeString.equals("test")) {
+				   testModeInt = 1;
+			   }
+			   else {
+				   System.out.println("Invalid request type");
+				   continue;
+			   }
+			   c.sendAndReceive(type, filename, datatype, outputMode, testModeInt);
+		   }
+		   if (s.equals("shutdown")) {
+			   scan.close();
+			   System.exit(1);
+		   }
+	   }
 	  	//send 10 alternating test read/write requests
-	  	for(int i = 0; i < 5; i++) {
-	  		c.sendAndReceive(1, "test.txt", "netascii", 1);
-	  		
-	  		c.sendAndReceive(2, "test2.txt", "ocTEt", 1);
-	  	}
-	  	
-	  	//send an invalid request
-	  	c.sendAndReceive(7, "test.txt", "netascii", 1);
-	  	
-	  	//Close the client
-	  	//c.close();
+//	  	for(int i = 0; i < 5; i++) {
+//	  		c.sendAndReceive(1, "test.txt", "netascii", 0);
+//	  		
+//	  		c.sendAndReceive(2, "test2.txt", "ocTEt", 0);
+//	  	}
+//	  	
+//	  	//send an invalid request
+//	  	c.sendAndReceive(7, "test.txt", "netascii", 0);
+//	  	
+//	  	//Close the client
+//	  	//c.close();
    }
 }
 
