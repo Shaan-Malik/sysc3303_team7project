@@ -15,11 +15,14 @@ public class TFTPServerThread extends Thread {
 	int len;
 	String filename,mode;
 	int j,k;
+	int block; //the number of blocks that have been read.
 
 	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len) {
 		receivePacket = _receivePacket;
 		data = _data;
 		req = _req;
+		if (req == "read") block = 1;
+		if (req == "write") block = 0;
 		len = _len;
 	}
 	public void run() {
@@ -59,9 +62,13 @@ public class TFTPServerThread extends Thread {
         
         // Create a response.
         if (req=="read") { // for Read it's 0301
-           response = readResp;
+           //response = readResp;
+           response = createReadResponse(block);
+           if (block > 65535) block = 0;
         } else if (req=="write") { // for Write it's 0400
-           response = writeResp;
+           //response = writeResp;
+           response = createWriteResponse(block);
+           if (block > 65535) block = 0;
         } else { // it was invalid, close socket on port 69 (so things work properly next time) and quit
            sendReceiveSocket.close();
            try {
@@ -128,5 +135,24 @@ public class TFTPServerThread extends Thread {
         // We're finished with this socket, so close it.
         //sendReceiveSocket.close();
      } // end of loop
+	
+	 public byte[] createReadResponse(int block) {
+		 int b = block;
+		 byte byte1 = 0, byte2 = 0;
+		 byte1 = (byte) (b/256);
+		 byte2 = (byte) (b%256);
+		 
+		 byte[] bytes = {0, 3, byte1, byte2};
+		 return bytes;
+	 }
+	 public byte[] createWriteResponse(int block) {
+		 int b = block;
+		 byte byte1 = 0, byte2 = 0;
+		 byte1 = (byte) (b/256);
+		 byte2 = (byte) (b%256);
+		 
+		 byte[] bytes = {0, 4, byte1, byte2};
+		 return bytes;
+	 }
 }
 	
