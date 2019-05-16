@@ -56,8 +56,6 @@ public class TFTPClient {
        msg[0] = 0;
        msg[1] = (byte) type;
 
-       // next we have a file name -- let's just pick one
-       filename = "test.txt";
        // convert to bytes
        fn = filename.getBytes();
         
