@@ -169,13 +169,58 @@ public class TFTPClient {
    {
 	   TFTPClient c = new TFTPClient();
 	   Scanner scan = new Scanner(System.in);
+	   int type, testModeInt;
+	   String filename, datatype, outputMode;
+	   System.out.println("TFTP Client: Interation 1\n");
+	   while (true) {
+		   System.out.print("Enter read or write request: \n");
+		   String request = scan.next();
+		   if (request.equals("read")) {
+			   type = 1;
+		   }
+		   else if (request.equals("write")) {
+			   type = 2;
+		   }
+		   else {
+			   System.out.println("Invalid request type");
+			   continue;
+		   }
+		   System.out.print("Enter filename: \n");
+		   filename = scan.next();
+		   System.out.print("Enter octet or netascii data type: \n");
+		   datatype = scan.next();
+		   if (!((datatype.equals("octet")) || (datatype.equals("netascii")))) {
+			   System.out.println("Invalid data type");
+			   continue;
+		   }
+		   System.out.print("Enter quiet or verbose mode: \n");
+		   outputMode = scan.next();
+		   if (!((outputMode.equals("quiet")) || (outputMode.equals("verbose")))){
+			   System.out.println("Invalid mode");
+			   continue;
+		   }
+		   System.out.print("Enter normal or test mode: \n");
+		   String testModeString = scan.next();
+		   if (testModeString.equals("normal")) {
+			   testModeInt = 0;
+		   }
+		   else if (testModeString.equals("test")) {
+			   testModeInt = 1;
+		   }
+		   else {
+			   System.out.println("Invalid request type");
+			   continue;
+		   }
+		   System.out.println("\nRequest initialisation successful\n");
+		   break;
+	   }
+	   System.out.println("Tip: Run the help command if you are stuck\n");
 	   while (true) {
 		   System.out.println("Enter a command: ");
 		   String s = scan.next();
-		   if (s.equals("start")) {
+		   if (s.equals("init")) {
 			   System.out.println("Read or Write request?");
 			   String request = scan.next();
-			   int type;
 			   if (request.equals("read")) {
 				   type = 1;
 			   }
@@ -187,22 +232,21 @@ public class TFTPClient {
 				   continue;
 			   }
 			   System.out.println("Enter Filename: ");
-			   String filename = scan.next();
+			   filename = scan.next();
 			   System.out.println("Enter data type (octet or netascii): ");
-			   String datatype = scan.next();
+			   datatype = scan.next();
 			   if (!((datatype.equals("octet")) || (datatype.equals("netascii")))) {
 				   System.out.println("Invalid data type");
 				   continue;
 			   }
 			   System.out.println("Enter quiet or verbose mode: ");
-			   String outputMode = scan.next();
+			   outputMode = scan.next();
 			   if (!((outputMode.equals("quiet")) || (outputMode.equals("verbose")))){
 				   System.out.println("Invalid mode");
 				   continue;
 			   }
 			   System.out.println("Enter normal or test mode: ");
 			   String testModeString = scan.next();
-			   int testModeInt;
 			   if (testModeString.equals("normal")) {
 				   testModeInt = 0;
 			   }
@@ -213,25 +257,66 @@ public class TFTPClient {
 				   System.out.println("Invalid request type");
 				   continue;
 			   }
-			   c.sendAndReceive(type, filename, datatype, outputMode, testModeInt);
 		   }
-		   if (s.equals("shutdown")) {
+		   else if (s.equals("shutdown")) {
 			   scan.close();
 			   System.exit(1);
 		   }
+		   else if (s.equals("help")) {
+			   System.out.println("help: The help command");
+			   System.out.println("init: Can initialise a new request");
+			   System.out.println("run: Run a request");
+			   System.out.println("shutdown: Shutsdown client");
+			   System.out.println("read: Sets to a read request");
+			   System.out.println("write: Sets to a write request");
+			   System.out.println("filename: Type in a new filename after the filename command.");
+			   System.out.println("octet: Sets to a octet datatype");
+			   System.out.println("netascii: Sets to a netascii datatype");
+			   System.out.println("quiet: Sets to quiet mode");
+			   System.out.println("verbose: Sets to verbose mode");
+			   System.out.println("normal: Sets to normal mode");
+			   System.out.println("test: Sets to test mode");
+		   }
+		   else if (s.equals("run")) {
+			   c.sendAndReceive(type, filename, datatype, outputMode, testModeInt);
+		   }
+		   else if (s.equals("read")) {
+			   type = 1;
+			   System.out.println("Client is now set to do a read request");
+		   }
+		   else if (s.equals("write")) {
+			   type = 2;
+			   System.out.println("Client is now set to do a write request");
+		   }
+		   else if (s.length() >= 10 && s.substring(0,8).equals("filename")) {
+			   filename = s.substring(9);
+			   System.out.println("filename has been changed to: " + filename);
+		   }
+		   else if (s.equals("octet")) {
+			   datatype = "octet";
+			   System.out.println("Client is now set to octet datatype");
+		   }
+		   else if (s.equals("netascii")) {
+			   datatype = "netascii";
+			   System.out.println("Client is now set to netascii datatype");
+		   }
+		   else if (s.equals("quiet")) {
+			   outputMode = "quiet";
+			   System.out.println("Client is now set to quiet mode");
+		   }
+		   else if (s.equals("verbose")) {
+			   outputMode = "verbose";
+			   System.out.println("Client is now set to verbose mode");
+		   }
+		   else if (s.equals("normal")) {
+			   testModeInt = 0;
+			   System.out.println("Client is now set to normal mode");
+		   }
+		   else if (s.equals("test")) {
+			   testModeInt = 1;
+			   System.out.println("Client is now set to test mode");
+		   }
 	   }
-	  	//send 10 alternating test read/write requests
-//	  	for(int i = 0; i < 5; i++) {
-//	  		c.sendAndReceive(1, "test.txt", "netascii", 0);
-//	  		
-//	  		c.sendAndReceive(2, "test2.txt", "ocTEt", 0);
-//	  	}
-//	  	
-//	  	//send an invalid request
-//	  	c.sendAndReceive(7, "test.txt", "netascii", 0);
-//	  	
-//	  	//Close the client
-//	  	//c.close();
    }
 }
 
