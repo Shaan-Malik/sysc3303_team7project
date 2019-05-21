@@ -17,7 +17,8 @@ public class TFTPServerThread extends Thread {
 	int j,k;
 	int block; //the number of blocks that have been read.
 
-	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len) {
+	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len, String _threadName, ThreadGroup _threadGroup) {
+		super(_threadGroup, _threadName); 
 		receivePacket = _receivePacket;
 		data = _data;
 		req = _req;

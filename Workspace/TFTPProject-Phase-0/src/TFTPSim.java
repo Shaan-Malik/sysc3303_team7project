@@ -40,6 +40,8 @@ public class TFTPSim {
       
       int clientPort, j=0, len;
 
+      SimShutdownThread shutThread = new SimShutdownThread(this);
+      shutThread.start();
       for(;;) { // loop forever
          // Construct a DatagramPacket for receiving packets up
          // to 100 bytes long (the length of the byte array).
@@ -194,6 +196,11 @@ public class TFTPSim {
       } // end of loop
 
    }
+   
+   public void shutdown() throws InterruptedException {
+		System.out.println("Sim shutting down");
+		System.exit(0);
+	}
 
    public static void main( String args[] )
    {
@@ -202,4 +209,25 @@ public class TFTPSim {
    }
 }
 
+
+class SimShutdownThread extends Thread{
+	Scanner scan;
+	TFTPSim parent;
+	SimShutdownThread(TFTPSim _parent){
+		scan = new Scanner(System.in);
+		parent = _parent;
+	}
+	
+	public void run() {
+		String s = scan.nextLine();
+		if (s.equals("shutdown")) {
+			try {
+				parent.shutdown();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+}
 

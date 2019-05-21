@@ -14,19 +14,22 @@ public class TFTPClient {
 
    public TFTPClient()
    {
-      try {
-         // Construct a datagram socket and bind it to any available
-         // port on the local host machine. This socket will be used to
-         // send and receive UDP Datagram packets.
-         sendReceiveSocket = new DatagramSocket();
-      } catch (SocketException se) {   // Can't create the socket.
-         se.printStackTrace();
-         System.exit(1);
-      }
+      
    }
 
    public void sendAndReceive(int type, String filename, String dataType, String outputMode, int testMode)
    {
+	   
+	   try {
+	         // Construct a datagram socket and bind it to any available
+	         // port on the local host machine. This socket will be used to
+	         // send and receive UDP Datagram packets.
+	         sendReceiveSocket = new DatagramSocket();
+	      } catch (SocketException se) {   // Can't create the socket.
+	         se.printStackTrace();
+	         System.exit(1);
+	      }
+	   
       byte[] msg = new byte[100], // message we send
              fn, // filename as an array of bytes
              md, // mode as an array of bytes
@@ -260,7 +263,7 @@ public class TFTPClient {
 		   }
 		   else if (s.equals("shutdown")) {
 			   scan.close();
-			   System.exit(1);
+			   System.exit(0);
 		   }
 		   else if (s.equals("help")) {
 			   System.out.println("help: The help command");
