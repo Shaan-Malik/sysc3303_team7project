@@ -42,14 +42,14 @@ public class TFTPServer {
 		byte[] data;
 		int len, j = 0, k = 0;
 		String req; // request type
-		String filename, mode;
+		String filename = "", mode;
 		ServerShutdownThread shutThread = new ServerShutdownThread(this);
 		shutThread.start();
 		for (;;) { // loop forever
 			// Construct a DatagramPacket for receiving packets up
-			// to 100 bytes long (the length of the byte array).
+			// to 516 bytes long (the length of the byte array).
 
-			data = new byte[100];
+			data = new byte[516];
 			receivePacket = new DatagramPacket(data, data.length);
 
 			System.out.println("Server: Waiting for packet.");
@@ -100,6 +100,7 @@ public class TFTPServer {
 					req = "error"; // filename is 0 bytes long
 				// otherwise, extract filename
 				filename = new String(data, 2, j - 2);
+				System.out.println("FILENAME: " + filename);
 			}
 
 			if (req != "error") { // check for mode
@@ -118,7 +119,7 @@ public class TFTPServer {
 			if (k != len - 1)
 				req = "error"; // other stuff at end of packet
 			
-			TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Integer.toString(threadNum), Threads);
+			TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Integer.toString(threadNum), Threads, filename);
 	        t.start();
 	        threadNum++;
 		}

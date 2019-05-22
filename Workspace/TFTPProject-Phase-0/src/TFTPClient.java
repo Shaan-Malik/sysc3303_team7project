@@ -4,6 +4,7 @@
 // the appropriate response from the server.  No actual file transfer takes place.   
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.net.*;
 
@@ -11,6 +12,8 @@ public class TFTPClient {
 
    private DatagramPacket sendPacket, receivePacket;
    private DatagramSocket sendReceiveSocket;
+   
+   String clientDirectory = "TFTPClient";
 
    public TFTPClient()
    {
@@ -30,7 +33,7 @@ public class TFTPClient {
 	         System.exit(1);
 	      }
 	   
-      byte[] msg = new byte[100], // message we send
+      byte[] msg = new byte[516], // message we send
              fn, // filename as an array of bytes
              md, // mode as an array of bytes
              data; // reply as array of bytes
@@ -107,11 +110,12 @@ public class TFTPClient {
           e.printStackTrace();
           System.exit(1);
        }
+       len = sendPacket.getLength();
        if (outputMode.equals("verbose")) {
     	   System.out.println("Client: sending packet ");
            System.out.println("To host: " + sendPacket.getAddress());
            System.out.println("Destination host port: " + sendPacket.getPort());
-           len = sendPacket.getLength();
+           
            System.out.println("Length: " + len);
            System.out.println("Containing: ");
            for (j=0;j<len;j++) {
@@ -119,6 +123,8 @@ public class TFTPClient {
            }
        }
        
+       FileInputStream input = null;
+       FileOutputStream output = null;
        
        // Form a String from the byte array, and print the string.
        String sending = new String(msg,0,len);
@@ -135,8 +141,8 @@ public class TFTPClient {
     	   System.out.println("Client: Packet sent.");
        }
        // Construct a DatagramPacket for receiving packets up
-       // to 100 bytes long (the length of the byte array).
-       data = new byte[100];
+       // to 516 bytes long (the length of the byte array).
+       data = new byte[516];
        receivePacket = new DatagramPacket(data, data.length);
        if (outputMode.equals("verbose")) {
     	   System.out.println("Client: Waiting for packet.");
@@ -149,12 +155,12 @@ public class TFTPClient {
           System.exit(1);
        }
        // Process the received datagram.
-       
+       len = receivePacket.getLength();
        if (outputMode.equals("verbose")) {
     	   System.out.println("Client: Packet received:");
            System.out.println("From host: " + receivePacket.getAddress());
            System.out.println("Host port: " + receivePacket.getPort());
-           len = receivePacket.getLength();
+           
            System.out.println("Length: " + len);
            System.out.println("Containing: ");
            
@@ -163,6 +169,133 @@ public class TFTPClient {
            }
            System.out.println();
        }
+       
+       
+       File destinationFile = new File("M:/"+clientDirectory+"/"+filename);
+       
+       if (type == 2) {
+    	   try {
+			input = new FileInputStream(destinationFile);
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
+       } else if (type == 1) {
+       
+       try {
+			output = new FileOutputStream(destinationFile);
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
+       }
+       
+       System.out.println("REACHED WHILE LOOP");
+       while (true) {
+       	//wait for new packet
+       	
+       	
+       	//check if it's read or write
+       	data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
+       	if (data[1] == 3) {
+       		//DATA
+       		
+       		try {
+					output.write(data,4, data.length - 4);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+       		
+       		byte[] bytes = {0, 4, data[2], data[3]};
+       		sendPacket = new DatagramPacket(bytes, bytes.length,
+                       receivePacket.getAddress(), receivePacket.getPort());
+       		
+       		 try {
+       	           sendReceiveSocket.send(sendPacket);
+       	     } catch (IOException e) {
+       	           e.printStackTrace();
+       	           System.exit(1);
+       	     }
+       		 
+       		 if (data.length < 516) {
+       			//Closes the stream, file is complete
+       			try {
+       				output.close();
+       			} catch (IOException e) {
+       				e.printStackTrace();
+       			}
+       			
+       			break;
+       		 }
+       		
+       	} else if (data[1] == 4) {
+       		//ACK
+       		int blockNumber = data[2]*256 + data[3] + 1;
+       		int sendingSize = (blockNumber*512 > destinationFile.length()) ? ((int) destinationFile.length() % 512) : (512);
+       		byte[] bytes = new byte[sendingSize + 4];
+       		bytes[0] = 0;
+       		bytes[1] = 3;
+       		bytes[2] = (byte) (blockNumber/256);
+       		bytes[3] = (byte) (blockNumber%256);
+       		
+       		try {
+   				input.read(bytes, 4, sendingSize);
+   			} catch (IOException e) {
+   				e.printStackTrace();
+   			}
+       		
+       		if (testMode == 0) {
+       			sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), receivePacket.getPort());
+       		}
+       		else {
+       			sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), sendPort);
+       		}
+
+       		 try {
+       	           sendReceiveSocket.send(sendPacket);
+       	     } catch (IOException e) {
+       	           e.printStackTrace();
+       	           System.exit(1);
+       	     }
+       		 
+       		 if (sendingSize < 512) {
+       			 try {
+						input.close();
+					 } catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					 } 
+       			 break;
+       		 }
+       	}
+       	
+       	try {
+            // Block until a datagram is received via sendReceiveSocket.
+            sendReceiveSocket.receive(receivePacket);
+         } catch(IOException e) {
+            e.printStackTrace();
+            System.exit(1);
+         }
+       	
+       	//parse packet
+       	
+       	//create response
+       	
+       	//
+       }
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
+       
        
       // We're finished, so close the socket.
       sendReceiveSocket.close();

@@ -38,15 +38,15 @@ public class TFTPSim {
 
       byte[] data;
       
-      int clientPort, j=0, len;
+      int clientPort, j=0, len, serverPort = 69;
 
       SimShutdownThread shutThread = new SimShutdownThread(this);
       shutThread.start();
       for(;;) { // loop forever
          // Construct a DatagramPacket for receiving packets up
-         // to 100 bytes long (the length of the byte array).
+         // to 516 bytes long (the length of the byte array).
          
-         data = new byte[100];
+         data = new byte[516];
          receivePacket = new DatagramPacket(data, data.length);
 
          System.out.println("Simulator: Waiting for packet.");
@@ -90,8 +90,11 @@ public class TFTPSim {
          //     address of the local host.
          //  69 - the destination port number on the destination host.
 
+         if (data[1] == 1 || data[1] == 2) serverPort = 69;
+        	 
          sendPacket = new DatagramPacket(data, len,
-                                        receivePacket.getAddress(), 69);
+                receivePacket.getAddress(), serverPort);
+         
         
          System.out.println("Simulator: sending packet.");
          System.out.println("To host: " + sendPacket.getAddress());
@@ -113,9 +116,9 @@ public class TFTPSim {
          }
          
          // Construct a DatagramPacket for receiving packets up
-         // to 100 bytes long (the length of the byte array).
+         // to 516 bytes long (the length of the byte array).
 
-         data = new byte[100];
+         data = new byte[516];
          receivePacket = new DatagramPacket(data, data.length);
 
          System.out.println("Simulator: Waiting for packet.");
@@ -127,6 +130,8 @@ public class TFTPSim {
             System.exit(1);
          }
 
+         serverPort = receivePacket.getPort();
+         
          // Process the received datagram.
          System.out.println("Simulator: Packet received:");
          System.out.println("From host: " + receivePacket.getAddress());

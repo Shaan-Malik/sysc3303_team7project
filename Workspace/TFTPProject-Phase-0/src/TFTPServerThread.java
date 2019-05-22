@@ -1,7 +1,8 @@
-import java.io.IOException;
+import java.io.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.util.Arrays;
 
 
 public class TFTPServerThread extends Thread {
@@ -16,8 +17,10 @@ public class TFTPServerThread extends Thread {
 	String filename,mode;
 	int j,k;
 	int block; //the number of blocks that have been read.
+	FileInputStream input;
+	String serverDirectory = "TFTPServer";
 
-	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len, String _threadName, ThreadGroup _threadGroup) {
+	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len, String _threadName, ThreadGroup _threadGroup, String _filename) {
 		super(_threadGroup, _threadName); 
 		receivePacket = _receivePacket;
 		data = _data;
@@ -25,6 +28,7 @@ public class TFTPServerThread extends Thread {
 		if (req == "read") block = 1;
 		if (req == "write") block = 0;
 		len = _len;
+		filename = _filename;
 	}
 	public void run() {
 		// If it's a read, send back DATA (03) block 1
@@ -60,16 +64,40 @@ public class TFTPServerThread extends Thread {
 //        
 //        if(k!=len-1) req="error"; // other stuff at end of packet   
         
+		File destinationFile = new File("M:/"+serverDirectory+"/"+filename);
+        if (req == "read") {
+        	try {
+        
+			input = new FileInputStream(destinationFile);
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
+        }
         
         // Create a response.
         if (req=="read") { // for Read it's 0301
-           //response = readResp;
-           response = createReadResponse(block);
-           if (block > 65535) block = 0;
+        	int blockLength = (512 > destinationFile.length()) ? ((int) destinationFile.length()) : (512);
+           byte[] bytes = new byte[blockLength + 4];
+        	bytes[0] = 0;
+        	bytes[1] = 3;
+        	bytes[2] = 0;
+        	bytes[3] = 1;
+        	//bytes from index 2 to index (length - 3)
+        	try {
+				input.read(bytes, 4, blockLength);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+        	sendPacket = new DatagramPacket(bytes, bytes.length,
+                    receivePacket.getAddress(), receivePacket.getPort());
+        	
+        	
+        	
         } else if (req=="write") { // for Write it's 0400
            //response = writeResp;
            response = createWriteResponse(block);
-           if (block > 65535) block = 0;
+           sendPacket = new DatagramPacket(response, response.length,
+                   receivePacket.getAddress(), receivePacket.getPort());
         } else { // it was invalid, close socket on port 69 (so things work properly next time) and quit
            sendReceiveSocket.close();
            try {
@@ -98,8 +126,7 @@ public class TFTPServerThread extends Thread {
         //     datagram, and use that as the destination port for the TFTP
         //     packet.
 
-        sendPacket = new DatagramPacket(response, response.length,
-                              receivePacket.getAddress(), receivePacket.getPort());
+        
 
         System.out.println("Server: Sending packet:");
         System.out.println("To host: " + sendPacket.getAddress());
@@ -107,9 +134,9 @@ public class TFTPServerThread extends Thread {
         len = sendPacket.getLength();
         System.out.println("Length: " + len);
         System.out.println("Containing: ");
-        for (j=0;j<len;j++) {
-           System.out.println("byte " + j + " " + response[j]);
-        }
+   //     for (j=0;j<len;j++) {
+     //      System.out.println("byte " + j + " " + response[j]);
+     //   }
 
         // Send the datagram packet to the client via a new socket.
 
@@ -132,9 +159,112 @@ public class TFTPServerThread extends Thread {
 
         System.out.println("Server: packet sent using port " + sendReceiveSocket.getLocalPort());
         System.out.println();
-
+        FileOutputStream output = null;
+        if (req.equals("write")) {
+             try {
+     			output = new FileOutputStream(destinationFile);
+     		} catch (FileNotFoundException e1) {
+     			e1.printStackTrace();
+     		}
+        }
+       
+        System.out.println("REACHED WHILE LOOP");
+        
+        while (true) {
+        	//wait for new packet
+        	try {
+                // Block until a datagram is received via sendReceiveSocket.
+                sendReceiveSocket.receive(receivePacket);
+             } catch(IOException e) {
+                e.printStackTrace();
+                System.exit(1);
+             }
+        	System.out.println("PACKET RECEIVED");
+        	//check if it's read or write
+        	byte[] data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
+        	if (data[1] == 3) {
+        		//DATA
+        		try {
+					output.write(data,4, data.length - 4);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+        		
+        		byte[] bytes = {0, 4, data[2], data[3]};
+        		sendPacket = new DatagramPacket(bytes, bytes.length,
+                        receivePacket.getAddress(), receivePacket.getPort());
+        		
+        		 try {
+        	           sendReceiveSocket.send(sendPacket);
+        	     } catch (IOException e) {
+        	           e.printStackTrace();
+        	           System.exit(1);
+        	     }
+        		 System.out.println("FLAG");
+        		 if (data.length < 516) {
+        			//Closes the stream, file is complete
+        			try {
+        				output.close();
+        				System.out.println("output closed");
+        			} catch (IOException e) {
+        				e.printStackTrace();
+        			}
+        			
+        			break;
+        		 }
+        		
+        	} else if (data[1] == 4) {
+        		//ACK
+        		int blockNumber = data[2]*256 + data[3] + 1;
+        		int sendingSize = (blockNumber*512 > destinationFile.length()) ? ((int) destinationFile.length() % 512) : (512);
+        		byte[] bytes = new byte[sendingSize + 4];
+        		bytes[0] = 0;
+        		bytes[1] = 3;
+        		bytes[2] = (byte) (blockNumber/256);
+        		bytes[3] = (byte) (blockNumber%256);
+        		
+        		try {
+    				input.read(bytes, 4, sendingSize);
+    			} catch (IOException e) {
+    				e.printStackTrace();
+    			}
+        		
+        		sendPacket = new DatagramPacket(bytes, bytes.length,
+                        receivePacket.getAddress(), receivePacket.getPort());
+        		
+        		 try {
+        	           sendReceiveSocket.send(sendPacket);
+        	     } catch (IOException e) {
+        	           e.printStackTrace();
+        	           System.exit(1);
+        	     }
+        		 
+        		 if (sendingSize < 512) {
+        			 try {
+						input.close();
+					 } catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					 } 
+        			 break;
+        		 }
+        	}
+        	
+        	//parse packet
+        	
+        	//create response
+        	
+        	//
+        }
+        
+        
+        
+        
+        
+        
+        
         // We're finished with this socket, so close it.
-        //sendReceiveSocket.close();
+        sendReceiveSocket.close();
      } // end of loop
 	
 	 public byte[] createReadResponse(int block) {
