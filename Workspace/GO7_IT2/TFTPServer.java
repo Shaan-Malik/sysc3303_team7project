@@ -19,7 +19,6 @@ public class TFTPServer {
 	// UDP datagram packets and sockets used to send / receive
 	private DatagramPacket receivePacket;
 	private DatagramSocket receiveSocket;
-	private int threadNum;
 	private ThreadGroup Threads;
 
 	public TFTPServer() {
@@ -32,7 +31,6 @@ public class TFTPServer {
 			se.printStackTrace();
 			System.exit(1);
 		}
-		threadNum = 0;
 		Threads = new ThreadGroup("Parent Thread Group");
 	}
 
@@ -123,9 +121,20 @@ public class TFTPServer {
 			if (k != len - 1)
 				req = "error"; // other stuff at end of packet
 			
-			TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Integer.toString(threadNum), Threads, filename);
-	        t.start();
-	        threadNum++;
+			//If a tread working on the filename isn't in the thread group start a separate thread to handle it
+			boolean fileIsFree = true;
+			
+			Thread[] threadArray = new Thread[Threads.activeCount()];
+			Threads.enumerate(threadArray);
+			for (Thread thread: threadArray) {
+				if ( thread.getName() == filename ) fileIsFree = false;
+			}
+			
+			if (fileIsFree) {
+				TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Threads, filename);
+				t.start();
+	        }
+			
 		}
 	}
 	

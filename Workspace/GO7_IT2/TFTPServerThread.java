@@ -20,8 +20,8 @@ public class TFTPServerThread extends Thread {
 	FileInputStream input;
 	String serverDirectory = "TFTPServer";
 
-	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len, String _threadName, ThreadGroup _threadGroup, String _filename) {
-		super(_threadGroup, _threadName); 
+	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len, ThreadGroup _threadGroup, String _filename) {
+		super(_threadGroup, _filename); 
 		receivePacket = _receivePacket;
 		data = _data;
 		req = _req;
