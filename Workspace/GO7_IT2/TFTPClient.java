@@ -13,6 +13,11 @@ public class TFTPClient {
    private DatagramPacket sendPacket, receivePacket;
    private DatagramSocket sendReceiveSocket;
    
+   private int expectedBlockNum;
+   
+   //private InetAddress expectedAddress;
+   //private SocketAddress expectedSocket;
+   
    String clientDirectory = "TFTPClient";
 
    public TFTPClient()
@@ -287,6 +292,26 @@ public class TFTPClient {
       sendReceiveSocket.close();
    }
 
+   public boolean isDuplicate(byte[] data) {
+	   
+	   int blockNum = data[2]*256 + data[3] + 1;
+	   
+	   if(blockNum != expectedBlockNum) {
+		   
+		   if(data[0] == (byte)0 && data[0] == (byte)4) { //If ACK
+			   
+		   }
+		   
+		   if(data[0] == (byte)0 && data[0] == (byte)3) { //If DATA
+			   
+		   }
+
+		   return false;
+	   }
+	   
+	   return true;
+   }
+   
    public static void main(String args[]) // UI
    {
 	   TFTPClient c = new TFTPClient();
