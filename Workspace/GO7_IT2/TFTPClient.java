@@ -22,8 +22,6 @@ public class TFTPClient {
 	private DatagramPacket sendPacket, receivePacket;
 	private DatagramSocket sendReceiveSocket;
 
-	private int expectedBlockNum;
-
 	// private InetAddress expectedAddress;
 	// private SocketAddress expectedSocket;
 
@@ -201,25 +199,37 @@ public class TFTPClient {
 
 		if (outputMode.equals("verbose"))
 			System.out.println("Begin Receiving / Sending Data");
+		
+		int expectedBlockNum = 0;
 
 		while (true) {
 			// wait for new packet
 
+			expectedBlockNum++;
+			
 			// check if it's read or write
 			data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// READ
+				int blockNum = data[2] * 256 + data[3] + 1;
 
-				// Output data to file
-				try {
-					output.write(data, 4, data.length - 4);
-				} catch (IOException e) {
-					e.printStackTrace();
+				if (blockNum == expectedBlockNum){
+					// Output data to file
+					try {
+						output.write(data, 4, data.length - 4);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}				
+				}else {
+					System.out.println("\nDuplicate/Out-of-order DATA packet\n");
+					expectedBlockNum--;
 				}
-
+				 
 				// Creating and sending response
-				byte[] bytes = { 0, 4, data[2], data[3] };
+				byte[] bytes = { 0, 4, (byte) (expectedBlockNum / 256), 
+						(byte) (expectedBlockNum % 256) };
+			
 
 				if (testMode == 0) {
 					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
@@ -252,44 +262,51 @@ public class TFTPClient {
 
 				// Prepare data with wrapper
 				int blockNumber = data[2] * 256 + data[3] + 1;
-				int sendingSize = (blockNumber * 512 > destinationFile.length())
-						? ((int) destinationFile.length() % 512)
-						: (512);
-				byte[] bytes = new byte[sendingSize + 4];
-				bytes[0] = 0;
-				bytes[1] = 3;
-				bytes[2] = (byte) (blockNumber / 256);
-				bytes[3] = (byte) (blockNumber % 256);
+				
+				if(blockNumber == expectedBlockNum) {
+					
+					int sendingSize = (blockNumber * 512 > destinationFile.length())
+							? ((int) destinationFile.length() % 512)
+							: (512);
+					byte[] bytes = new byte[sendingSize + 4];
+					bytes[0] = 0;
+					bytes[1] = 3;
+					bytes[2] = (byte) (blockNumber / 256);
+					bytes[3] = (byte) (blockNumber % 256);
 
-				// insert data from file
-				try {
-					input.read(bytes, 4, sendingSize);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-				if (testMode == 0) {
-					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
-							receivePacket.getPort());
-				} else {
-					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), sendPort);
-				}
-
-				try {
-					sendReceiveSocket.send(sendPacket);
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
-
-				if (sendingSize < 512) {
+					// insert data from file
 					try {
-						input.close();
+						input.read(bytes, 4, sendingSize);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					break;
+
+					if (testMode == 0) {
+						sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
+								receivePacket.getPort());
+					} else {
+						sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), sendPort);
+					}
+
+					try {
+						sendReceiveSocket.send(sendPacket);
+					} catch (IOException e) {
+						e.printStackTrace();
+						System.exit(1);
+					}
+
+					if (sendingSize < 512) {
+						try {
+							input.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						break;
+					}
+				}else {
+					System.out.println("\nDuplicate/Out-of-order ACK packet\n");
+					expectedBlockNum--;
 				}
 			}
 
@@ -305,26 +322,6 @@ public class TFTPClient {
 
 		// We're finished, so close the socket.
 		sendReceiveSocket.close();
-	}
-
-	public boolean isDuplicate(byte[] data) {
-
-		int blockNum = data[2] * 256 + data[3] + 1;
-
-		if (blockNum != expectedBlockNum) {
-
-			if (data[0] == (byte) 0 && data[0] == (byte) 4) { // If ACK
-
-			}
-
-			if (data[0] == (byte) 0 && data[0] == (byte) 3) { // If DATA
-
-			}
-
-			return false;
-		}
-
-		return true;
 	}
 
 	public static void main(String args[]) // UI

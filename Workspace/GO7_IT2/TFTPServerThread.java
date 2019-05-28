@@ -129,8 +129,13 @@ public class TFTPServerThread extends Thread {
 		}
 
 		System.out.println("Begin Sending and Receiving Data");
+		
+		int expectedBlockNum = 0;
 
 		while (true) {
+			
+			expectedBlockNum++;
+			
 			// wait for new packet
 			try {
 				// Block until a datagram is received via sendReceiveSocket.
@@ -140,20 +145,30 @@ public class TFTPServerThread extends Thread {
 				System.exit(1);
 			}
 			System.out.println("Packet recieved");
+			
 			// check if it's read or write
 			byte[] data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
+			int blockNumber = data[2] * 256 + data[3] + 1;
+			
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// WRITE
 
-				try {
-					output.write(data, 4, data.length - 4);
-				} catch (IOException e) {
-					e.printStackTrace();
+				if(blockNumber == expectedBlockNum) {					
+					try {
+						output.write(data, 4, data.length - 4);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}else {
+					System.out.println("\nDuplicate/Out-of-order DATA packet\n");
+					expectedBlockNum--;
 				}
 
 				// Create and send response
-				byte[] bytes = { 0, 4, data[2], data[3] };
+				byte[] bytes = { 0, 4, (byte) (expectedBlockNum / 256), 
+						(byte) (expectedBlockNum % 256) };
+				
 				sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
 						receivePacket.getPort());
 
@@ -179,45 +194,51 @@ public class TFTPServerThread extends Thread {
 			} else if (data[1] == 4) {
 				// Parsing ACK packet
 				// READ
+				
+				if(blockNumber == expectedBlockNum) {
+					
+					int sendingSize = (blockNumber * 512 > destinationFile.length())
+							? ((int) destinationFile.length() % 512)
+							: (512);
+					byte[] bytes = new byte[sendingSize + 4];
+					bytes[0] = 0;
+					bytes[1] = 3;
+					bytes[2] = (byte) (blockNumber / 256);
+					bytes[3] = (byte) (blockNumber % 256);
 
-				// Prepare data with wrapper
-				int blockNumber = data[2] * 256 + data[3] + 1;
-				int sendingSize = (blockNumber * 512 > destinationFile.length())
-						? ((int) destinationFile.length() % 512)
-						: (512);
-				byte[] bytes = new byte[sendingSize + 4];
-				bytes[0] = 0;
-				bytes[1] = 3;
-				bytes[2] = (byte) (blockNumber / 256);
-				bytes[3] = (byte) (blockNumber % 256);
-
-				// insert data from file
-				try {
-					input.read(bytes, 4, sendingSize);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-				sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
-						receivePacket.getPort());
-
-				try {
-					sendReceiveSocket.send(sendPacket);
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(1);
-				}
-				System.out.println("FLAG");
-				if (sendingSize < 512) {
+					// insert data from file
 					try {
-						input.close();
-						System.out.println("input closed");
+						input.read(bytes, 4, sendingSize);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					break;
+
+					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
+							receivePacket.getPort());
+
+					try {
+						sendReceiveSocket.send(sendPacket);
+					} catch (IOException e) {
+						e.printStackTrace();
+						System.exit(1);
+					}
+					System.out.println("FLAG");
+					if (sendingSize < 512) {
+						try {
+							input.close();
+							System.out.println("input closed");
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						break;
+					}
+					
+				}else {
+					System.out.println("\nDuplicate/Out-of-order ACK packet\n");
+					expectedBlockNum--;
 				}
+						
 			}
 
 		}
