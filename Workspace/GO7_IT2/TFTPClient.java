@@ -312,12 +312,52 @@ public class TFTPClient {
 				}
 			}
 
-			try {
-				// Block until a datagram is received via sendReceiveSocket.
-				sendReceiveSocket.receive(receivePacket);
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(1);
+			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up to three times until quit
+			
+			if (type == 2) { // If sending data
+				try {
+					sendReceiveSocket.setSoTimeout(5000);
+				} catch (SocketException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
+			}
+
+			for (int i = 1; i > 0; i++) {
+
+				try {
+					// Block until a datagram is received via sendReceiveSocket.
+					sendReceiveSocket.receive(receivePacket);
+				} catch (IOException e) {
+
+					if (type == 2 && i <= 3) {
+						// re-send packet
+						System.out.println("Timeout: Re-sending last data packet");
+						try {
+							sendReceiveSocket.send(sendPacket);
+						} catch (IOException e1) {
+							e1.printStackTrace();
+							System.exit(1);
+						}
+						continue;
+					}
+
+				}
+
+				if (i > 3) {
+					System.out.println("Timeout: Shutting Down");
+					System.exit(0);
+				} else
+					break;
+			}
+
+			if (type == 2) { // If sending data
+				try {
+					sendReceiveSocket.setSoTimeout(0);
+				} catch (SocketException e) {
+					e.printStackTrace();
+					System.exit(1);
+				}
 			}
 
 		}
