@@ -213,7 +213,7 @@ public class TFTPClient {
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// READ
-				int blockNumber = data[2] * 256 + data[3];
+				int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
 				
 				if (blockNumber == expectedBlockNum){
 					// Output data to file
@@ -262,7 +262,7 @@ public class TFTPClient {
 				// WRITE
 
 				// Prepare data with wrapper
-				int blockNumber = data[2] * 256 + data[3];
+				int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
 				
 				if(blockNumber == expectedBlockNum) {
 					

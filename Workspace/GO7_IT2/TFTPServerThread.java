@@ -146,7 +146,7 @@ public class TFTPServerThread extends Thread {
 			
 			// check if it's read or write
 			byte[] data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
-			int blockNumber = data[2] * 256 + data[3];
+			int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
 			
 			if (data[1] == 3) {
 				// Parsing DATA packet
