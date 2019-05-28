@@ -200,35 +200,36 @@ public class TFTPClient {
 		if (outputMode.equals("verbose"))
 			System.out.println("Begin Receiving / Sending Data");
 		
-		int expectedBlockNum = 0;
+		int expectedBlockNum;
+		
+		if(type == 2) expectedBlockNum = 0;
+		else expectedBlockNum = 1;
 
 		while (true) {
 			// wait for new packet
-
-			expectedBlockNum++;
 			
 			// check if it's read or write
 			data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// READ
-				int blockNum = data[2] * 256 + data[3] + 1;
-
-				if (blockNum == expectedBlockNum){
+				int blockNumber = data[2] * 256 + data[3];
+				
+				if (blockNumber == expectedBlockNum){
 					// Output data to file
 					try {
 						output.write(data, 4, data.length - 4);
 					} catch (IOException e) {
 						e.printStackTrace();
-					}				
+					}			
+					expectedBlockNum = ( expectedBlockNum + 1 ) % 65536;
 				}else {
-					System.out.println("\nDuplicate/Out-of-order DATA packet\n");
-					expectedBlockNum--;
+					System.out.println("\nDuplicate/Out-of-order DATA packet"+blockNumber+" "+expectedBlockNum+"\n");
 				}
 				 
 				// Creating and sending response
-				byte[] bytes = { 0, 4, (byte) (expectedBlockNum / 256), 
-						(byte) (expectedBlockNum % 256) };
+				byte[] bytes = { 0, 4, (byte) (blockNumber / 256), 
+						(byte) (blockNumber % 256) };
 			
 
 				if (testMode == 0) {
@@ -261,9 +262,11 @@ public class TFTPClient {
 				// WRITE
 
 				// Prepare data with wrapper
-				int blockNumber = data[2] * 256 + data[3] + 1;
+				int blockNumber = data[2] * 256 + data[3];
 				
 				if(blockNumber == expectedBlockNum) {
+					
+					blockNumber = ( blockNumber + 1 ) % 65536;
 					
 					int sendingSize = (blockNumber * 512 > destinationFile.length())
 							? ((int) destinationFile.length() % 512)
@@ -280,7 +283,7 @@ public class TFTPClient {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-
+					expectedBlockNum = ( expectedBlockNum + 1 ) % 65536;
 					if (testMode == 0) {
 						sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
 								receivePacket.getPort());
@@ -305,8 +308,7 @@ public class TFTPClient {
 						break;
 					}
 				}else {
-					System.out.println("\nDuplicate/Out-of-order ACK packet\n");
-					expectedBlockNum--;
+					System.out.println("\nDuplicate/Out-of-order ACK packet"+blockNumber+" "+expectedBlockNum+"\n");
 				}
 			}
 
@@ -330,7 +332,7 @@ public class TFTPClient {
 		Scanner scan = new Scanner(System.in);
 		int type, testModeInt;
 		String filename, datatype, outputMode;
-		System.out.println("TFTP Client: Interation 1\n");
+		System.out.println("TFTP Client: Interation 2\n");
 		while (true) {
 			System.out.print("Enter read or write request: \n");
 			String request = scan.next();
