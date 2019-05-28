@@ -50,12 +50,119 @@ public class TFTPSim {
 
 		SimShutdownThread shutThread = new SimShutdownThread(this, scan);
 		shutThread.start();
+		
+		boolean lastAck = false;
 
 		for (;;) { // loop forever
 			data = ReceiveFromClient();
-			SendToHost(data);
-			data = ReceiveFromHost();
-			SendToClient(data);
+			
+			String byteNumber = "";
+			
+			switch (data[1]) {
+			case 1:
+				byteNumber = "01";
+				break;
+			case 2:
+				byteNumber = "02";
+				break;
+			case 3:
+				byteNumber = "03" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+				break;
+			case 4:
+				byteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+				break;
+			}
+			
+			if (errors.containsKey(byteNumber)) {
+				int type = errors.get(byteNumber);
+				switch (type) {
+				case 1:
+					// Losing Packet
+					data = ReceiveFromClient();
+					SendToServer(data);
+					break;
+				case 2:
+					// delaying Packet
+					try {
+						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					SendToServer(data);
+					break;
+				case 3:
+					// duplicating Packet
+					SendToServer(data);
+					try {
+						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					SendToServer(data);
+					break;
+				}
+			}
+			else {
+				SendToServer(data);
+			}
+			
+			if (lastAck) {
+				continue;
+			}
+			
+			data = ReceiveFromServer();
+			
+			switch (data[1]) {
+			case 1:
+				byteNumber = "01";
+				break;
+			case 2:
+				byteNumber = "02";
+				break;
+			case 3:
+				byteNumber = "03" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+				break;
+			case 4:
+				byteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+				break;
+			}
+			
+			if (errors.containsKey(byteNumber)) {
+				int type = errors.get(byteNumber);
+				switch (type) {
+				case 1:
+					// Losing Packet
+					data = ReceiveFromServer();
+					SendToClient(data);
+					break;
+				case 2:
+					// delaying Packet
+					try {
+						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					SendToClient(data);
+					break;
+				case 3:
+					// duplicating Packet
+					SendToClient(data);
+					try {
+						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					SendToClient(data);
+					break;
+				}
+			}
+			else {
+				SendToClient(data);
+			}
+			
+			if (data[1] == 3 && data.length < 516) {
+				lastAck = true;
+			}
 		}
 	}
 
@@ -92,7 +199,7 @@ public class TFTPSim {
 		return data;
 	}
 
-	public void SendToHost(byte[] data) {
+	public void SendToServer(byte[] data) {
 
 		// Reset sending port on a new transfer
 		if (data[1] == 1 || data[1] == 2)
@@ -122,7 +229,7 @@ public class TFTPSim {
 		}
 	}
 
-	public byte[] ReceiveFromHost() {
+	public byte[] ReceiveFromServer() {
 		byte[] data = new byte[516];
 		receivePacket = new DatagramPacket(data, data.length);
 

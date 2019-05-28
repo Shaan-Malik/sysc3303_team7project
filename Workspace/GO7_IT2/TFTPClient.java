@@ -40,7 +40,7 @@ public class TFTPClient {
 	 * @param outputMode Controls if print statements are used during the process
 	 * @param testMode   Controls if an intermediate host is used
 	 */
-	public void sendAndReceive(int type, String filename, String dataType, String outputMode, int testMode) {
+	public void sendAndReceive(int type, String filename, String dataType, String outputMode, int testMode, String directory) {
 
 		try {
 			// Construct a datagram socket and bind it to any available
@@ -180,7 +180,7 @@ public class TFTPClient {
 		}
 
 		// Initialize file I/O structures
-		File destinationFile = new File("M:/" + clientDirectory + "/" + filename);
+		File destinationFile = new File("M:/" + directory + "/" + filename);
 
 		if (type == 2) {
 			try {
@@ -331,8 +331,9 @@ public class TFTPClient {
 		TFTPClient c = new TFTPClient();
 		Scanner scan = new Scanner(System.in);
 		int type, testModeInt;
-		String filename, datatype, outputMode;
+		String filename, datatype, outputMode, directory;
 		System.out.println("TFTP Client: Interation 2\n");
+		datatype = "octet";
 		while (true) {
 			System.out.print("Enter read or write request: \n");
 			String request = scan.next();
@@ -346,12 +347,8 @@ public class TFTPClient {
 			}
 			System.out.print("Enter filename: \n");
 			filename = scan.next();
-			System.out.print("Enter octet or netascii data type: \n");
-			datatype = scan.next();
-			if (!((datatype.equals("octet")) || (datatype.equals("netascii")))) {
-				System.out.println("Invalid data type");
-				continue;
-			}
+			System.out.print("Enter file directory: \n");
+			directory = scan.next();
 			System.out.print("Enter quiet or verbose mode: \n");
 			outputMode = scan.next();
 			if (!((outputMode.equals("quiet")) || (outputMode.equals("verbose")))) {
@@ -376,39 +373,39 @@ public class TFTPClient {
 			System.out.println("Enter a command: ");
 			String s = scan.next();
 			if (s.equals("init")) {
-				System.out.println("Read or Write request?");
-				String request = scan.next();
-				if (request.equals("read")) {
-					type = 1;
-				} else if (request.equals("write")) {
-					type = 2;
-				} else {
-					System.out.println("Invalid request type");
-					continue;
-				}
-				System.out.println("Enter Filename: ");
-				filename = scan.next();
-				System.out.println("Enter data type (octet or netascii): ");
-				datatype = scan.next();
-				if (!((datatype.equals("octet")) || (datatype.equals("netascii")))) {
-					System.out.println("Invalid data type");
-					continue;
-				}
-				System.out.println("Enter quiet or verbose mode: ");
-				outputMode = scan.next();
-				if (!((outputMode.equals("quiet")) || (outputMode.equals("verbose")))) {
-					System.out.println("Invalid mode");
-					continue;
-				}
-				System.out.println("Enter normal or test mode: ");
-				String testModeString = scan.next();
-				if (testModeString.equals("normal")) {
-					testModeInt = 0;
-				} else if (testModeString.equals("test")) {
-					testModeInt = 1;
-				} else {
-					System.out.println("Invalid request type");
-					continue;
+				while (true) {
+					System.out.print("Enter read or write request: \n");
+					String request = scan.next();
+					if (request.equals("read")) {
+						type = 1;
+					} else if (request.equals("write")) {
+						type = 2;
+					} else {
+						System.out.println("Invalid request type");
+						continue;
+					}
+					System.out.print("Enter filename: \n");
+					filename = scan.next();
+					System.out.print("Enter file directory: \n");
+					directory = scan.next();
+					System.out.print("Enter quiet or verbose mode: \n");
+					outputMode = scan.next();
+					if (!((outputMode.equals("quiet")) || (outputMode.equals("verbose")))) {
+						System.out.println("Invalid mode");
+						continue;
+					}
+					System.out.print("Enter normal or test mode: \n");
+					String testModeString = scan.next();
+					if (testModeString.equals("normal")) {
+						testModeInt = 0;
+					} else if (testModeString.equals("test")) {
+						testModeInt = 1;
+					} else {
+						System.out.println("Invalid request type");
+						continue;
+					}
+					System.out.println("\nRequest initialisation successful\n");
+					break;
 				}
 			} else if (s.equals("shutdown")) {
 				scan.close();
@@ -421,6 +418,7 @@ public class TFTPClient {
 				System.out.println("read: Sets to a read request");
 				System.out.println("write: Sets to a write request");
 				System.out.println("filename: Type in a new filename after the filename command.");
+				System.out.println("directory: Type in a new directory after the directory command.");
 				System.out.println("octet: Sets to a octet datatype");
 				System.out.println("netascii: Sets to a netascii datatype");
 				System.out.println("quiet: Sets to quiet mode");
@@ -428,7 +426,7 @@ public class TFTPClient {
 				System.out.println("normal: Sets to normal mode");
 				System.out.println("test: Sets to test mode");
 			} else if (s.equals("run")) {
-				c.sendAndReceive(type, filename, datatype, outputMode, testModeInt);
+				c.sendAndReceive(type, filename, datatype, outputMode, testModeInt, directory);
 			} else if (s.equals("read")) {
 				type = 1;
 				System.out.println("Client is now set to do a read request");
@@ -439,6 +437,10 @@ public class TFTPClient {
 				System.out.println("Enter Filename: ");
 				filename = scan.next();
 				System.out.println("filename has been changed to: " + filename);
+			} else if (s.equals("directory")) {
+				System.out.println("Enter directory: ");
+				directory = scan.next();
+				System.out.println("directory has been changed to: " + directory);
 			} else if (s.equals("octet")) {
 				datatype = "octet";
 				System.out.println("Client is now set to octet datatype");
