@@ -40,7 +40,8 @@ public class TFTPClient {
 	 * @param outputMode Controls if print statements are used during the process
 	 * @param testMode   Controls if an intermediate host is used
 	 */
-	public void sendAndReceive(int type, String filename, String dataType, String outputMode, int testMode, String directory) {
+	public void sendAndReceive(int type, String filename, String dataType, String outputMode, int testMode,
+			String directory) {
 
 		try {
 			// Construct a datagram socket and bind it to any available
@@ -149,6 +150,7 @@ public class TFTPClient {
 		if (outputMode.equals("verbose")) {
 			System.out.println("Client: Packet sent.");
 		}
+
 		// Construct a DatagramPacket for receiving packets up
 		// to 516 bytes long (the length of the byte array).
 		data = new byte[516];
@@ -156,13 +158,52 @@ public class TFTPClient {
 		if (outputMode.equals("verbose")) {
 			System.out.println("Client: Waiting for packet.");
 		}
+
+		// Timeout after 5 seconds if sending data. On timeout re-send last packet, up
+		// to three times until quit
+
 		try {
-			// Block until a datagram is received via sendReceiveSocket.
-			sendReceiveSocket.receive(receivePacket);
-		} catch (IOException e) {
+			sendReceiveSocket.setSoTimeout(5000);
+		} catch (SocketException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
+
+		for (int i = 1; i > 0; i++) {
+
+			try {
+				// Block until a datagram is received via sendReceiveSocket.
+				sendReceiveSocket.receive(receivePacket);
+			} catch (IOException e) {
+
+				if (i <= 3) {
+					// re-send packet
+					System.out.println("Timeout: Re-sending last request packet");
+					try {
+						sendReceiveSocket.send(sendPacket);
+					} catch (IOException e1) {
+						e1.printStackTrace();
+						System.exit(1);
+					}
+					continue;
+				}
+
+			}
+
+			if (i > 3) {
+				System.out.println("Timeout: Shutting Down");
+				System.exit(0);
+			} else
+				break;
+		}
+
+		try {
+			sendReceiveSocket.setSoTimeout(0);
+		} catch (SocketException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+
 		// Process the received datagram.
 		len = receivePacket.getLength();
 		if (outputMode.equals("verbose")) {
@@ -180,7 +221,7 @@ public class TFTPClient {
 		}
 
 		// Initialize file I/O structures
-		File destinationFile = new File("M:/" + directory + "/" + filename);
+		File destinationFile = new File(directory + "/" + filename);
 
 		if (type == 2) {
 			try {
@@ -199,38 +240,39 @@ public class TFTPClient {
 
 		if (outputMode.equals("verbose"))
 			System.out.println("Begin Receiving / Sending Data");
-		
+
 		int expectedBlockNum;
-		
-		if(type == 2) expectedBlockNum = 0;
-		else expectedBlockNum = 1;
+
+		if (type == 2)
+			expectedBlockNum = 0;
+		else
+			expectedBlockNum = 1;
 
 		while (true) {
 			// wait for new packet
-			
+
 			// check if it's read or write
 			data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// READ
 				int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
-				
-				if (blockNumber == expectedBlockNum){
+
+				if (blockNumber == expectedBlockNum) {
 					// Output data to file
 					try {
 						output.write(data, 4, data.length - 4);
 					} catch (IOException e) {
 						e.printStackTrace();
-					}			
-					expectedBlockNum = ( expectedBlockNum + 1 ) % 65536;
-				}else {
-					System.out.println("\nDuplicate/Out-of-order DATA packet"+blockNumber+" "+expectedBlockNum+"\n");
+					}
+					expectedBlockNum = (expectedBlockNum + 1) % 65536;
+				} else {
+					System.out.println("\nDuplicate/Out-of-order DATA packet " + blockNumber + ", expected: "
+							+ expectedBlockNum + "\n");
 				}
-				 
+
 				// Creating and sending response
-				byte[] bytes = { 0, 4, (byte) (blockNumber / 256), 
-						(byte) (blockNumber % 256) };
-			
+				byte[] bytes = { 0, 4, (byte) (blockNumber / 256), (byte) (blockNumber % 256) };
 
 				if (testMode == 0) {
 					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
@@ -263,11 +305,11 @@ public class TFTPClient {
 
 				// Prepare data with wrapper
 				int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
-				
-				if(blockNumber == expectedBlockNum) {
-					
-					blockNumber = ( blockNumber + 1 ) % 65536;
-					
+
+				if (blockNumber == expectedBlockNum) {
+
+					blockNumber = (blockNumber + 1) % 65536;
+
 					int sendingSize = (blockNumber * 512 > destinationFile.length())
 							? ((int) destinationFile.length() % 512)
 							: (512);
@@ -283,7 +325,7 @@ public class TFTPClient {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					expectedBlockNum = ( expectedBlockNum + 1 ) % 65536;
+					expectedBlockNum = (expectedBlockNum + 1) % 65536;
 					if (testMode == 0) {
 						sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
 								receivePacket.getPort());
@@ -307,13 +349,15 @@ public class TFTPClient {
 						}
 						break;
 					}
-				}else {
-					System.out.println("\nDuplicate/Out-of-order ACK packet"+blockNumber+" "+expectedBlockNum+"\n");
+				} else {
+					System.out.println(
+							"\nDuplicate/Out-of-order ACK packet" + blockNumber + " " + expectedBlockNum + "\n");
 				}
 			}
 
-			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up to three times until quit
-			
+			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up
+			// to three times until quit
+
 			if (type == 2) { // If sending data
 				try {
 					sendReceiveSocket.setSoTimeout(5000);

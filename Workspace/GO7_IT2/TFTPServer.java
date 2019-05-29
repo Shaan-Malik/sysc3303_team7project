@@ -1,3 +1,4 @@
+
 // TFTPServer.java
 // This class is the server side of a simple TFTP server based on
 // UDP/IP. The server receives a read or write packet from a client and
@@ -67,12 +68,12 @@ public class TFTPServer {
 			System.out.println("Host port: " + receivePacket.getPort());
 			len = receivePacket.getLength();
 			System.out.println("Length: " + len);
-			System.out.println("Containing: ");
+			// System.out.println("Containing: ");
 
 			// print the bytes
-			for (j = 0; j < len; j++) {
-				System.out.println("byte " + j + " " + data[j]);
-			}
+			// for (j = 0; j < len; j++) {
+			// System.out.println("byte " + j + " " + data[j]);
+			// }
 
 			// Form a String from the byte array.
 			String received = new String(data, 0, len);
@@ -118,33 +119,37 @@ public class TFTPServer {
 
 			if (k != len - 1)
 				req = "error"; // other stuff at end of packet
-			
-			//If a tread working on the filename isn't in the thread group start a separate thread to handle it
+
+			// If a tread working on the filename isn't in the thread group start a separate
+			// thread to handle it
 			boolean fileIsFree = true;
-			
+
 			Thread[] threadArray = new Thread[Threads.activeCount()];
 			Threads.enumerate(threadArray);
-			for (Thread thread: threadArray) {
-				if ( thread.getName() == filename ) fileIsFree = false;
+			for (Thread thread : threadArray) {
+				System.out.println("thread name: " + thread.getName() + "filename: " + filename);
+				if (thread.getName().equals(filename))
+					fileIsFree = false;
 			}
-			
+
 			if (fileIsFree) {
+				System.out.println("file free");
 				TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Threads, filename);
 				t.start();
-	        }
-			
+			}
+
 		}
 	}
-	
+
 	/**
 	 * Shuts down the currently active server after all threads have stopped
 	 * 
-	 * @throws InterruptedException 
+	 * @throws InterruptedException
 	 */
 	public void shutdown() throws InterruptedException {
 		Thread[] threadArray = new Thread[Threads.activeCount()];
 		Threads.enumerate(threadArray);
-		for (Thread thread: threadArray) {
+		for (Thread thread : threadArray) {
 			thread.join();
 		}
 		System.out.println("Server shutting down");
@@ -157,15 +162,15 @@ public class TFTPServer {
 	}
 }
 
-
-class ServerShutdownThread extends Thread{
+class ServerShutdownThread extends Thread {
 	Scanner scan;
 	TFTPServer parent;
-	ServerShutdownThread(TFTPServer _parent){
+
+	ServerShutdownThread(TFTPServer _parent) {
 		scan = new Scanner(System.in);
 		parent = _parent;
 	}
-	
+
 	/**
 	 * On user typing in "shutdown" this shuts the server down
 	 */

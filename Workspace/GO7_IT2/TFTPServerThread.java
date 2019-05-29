@@ -93,7 +93,7 @@ public class TFTPServerThread extends Thread {
 		System.out.println("Destination host port: " + sendPacket.getPort());
 		len = sendPacket.getLength();
 		System.out.println("Length: " + len);
-		System.out.println("Containing: ");
+		// System.out.println("Containing: ");
 		// for (j=0;j<len;j++) {
 		// System.out.println("byte " + j + " " + response[j]);
 		// }
@@ -129,13 +129,14 @@ public class TFTPServerThread extends Thread {
 		}
 
 		System.out.println("Begin Sending and Receiving Data");
-		
+
 		int expectedBlockNum = 1;
 
 		while (true) {
-			
+
 			// wait for new packet
-			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up to three times until quit
+			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up
+			// to three times until quit
 
 			if (req == "read") { // If sending data
 				try {
@@ -183,30 +184,30 @@ public class TFTPServerThread extends Thread {
 				}
 			}
 			System.out.println("Packet recieved");
-			
+
 			// check if it's read or write
 			byte[] data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
 			int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
-			
+
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// WRITE
 
-				if(blockNumber == expectedBlockNum) {					
+				if (blockNumber == expectedBlockNum) {
 					try {
 						output.write(data, 4, data.length - 4);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					expectedBlockNum = ( expectedBlockNum + 1 ) % 65536;
-				}else {
-					System.out.println("\nDuplicate/Out-of-order DATA packet\n"+blockNumber+" "+expectedBlockNum+"\n");
+					expectedBlockNum = (expectedBlockNum + 1) % 65536;
+				} else {
+					System.out.println(
+							"\nDuplicate/Out-of-order DATA packet\n" + blockNumber + " " + expectedBlockNum + "\n");
 				}
 
 				// Create and send response
-				byte[] bytes = { 0, 4, (byte) (blockNumber / 256), 
-						(byte) (blockNumber % 256) };
-				
+				byte[] bytes = { 0, 4, (byte) (blockNumber / 256), (byte) (blockNumber % 256) };
+
 				sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
 						receivePacket.getPort());
 
@@ -231,11 +232,11 @@ public class TFTPServerThread extends Thread {
 			} else if (data[1] == 4) {
 				// Parsing ACK packet
 				// READ
-				
-				if(blockNumber == expectedBlockNum) {
-					
-					blockNumber = ( blockNumber + 1 ) % 65536;
-					
+
+				if (blockNumber == expectedBlockNum) {
+
+					blockNumber = (blockNumber + 1) % 65536;
+
 					int sendingSize = (blockNumber * 512 > destinationFile.length())
 							? ((int) destinationFile.length() % 512)
 							: (512);
@@ -251,7 +252,7 @@ public class TFTPServerThread extends Thread {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-					expectedBlockNum = ( expectedBlockNum + 1 ) % 65536;
+					expectedBlockNum = (expectedBlockNum + 1) % 65536;
 					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
 							receivePacket.getPort());
 
@@ -261,7 +262,6 @@ public class TFTPServerThread extends Thread {
 						e.printStackTrace();
 						System.exit(1);
 					}
-					System.out.println("FLAG");
 					if (sendingSize < 512) {
 						try {
 							input.close();
@@ -272,11 +272,12 @@ public class TFTPServerThread extends Thread {
 						}
 						break;
 					}
-					
-				}else {
-					System.out.println("\nDuplicate/Out-of-order ACK packet\n"+blockNumber+" "+expectedBlockNum+"\n");
+
+				} else {
+					System.out.println(
+							"\nDuplicate/Out-of-order ACK packet\n" + blockNumber + " " + expectedBlockNum + "\n");
 				}
-						
+
 			}
 
 		}

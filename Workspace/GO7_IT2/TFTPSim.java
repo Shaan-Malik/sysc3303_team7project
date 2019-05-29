@@ -27,6 +27,10 @@ public class TFTPSim {
 	private static Scanner scan;
 	private int clientPort;
 	private int serverPort = 69;
+	String clientByteNumber = "";
+	String serverByteNumber = "";
+	String prevClientByteNumber = "";
+	String prevServerByteNumber = "";
 
 	public TFTPSim() {
 		try {
@@ -50,117 +54,249 @@ public class TFTPSim {
 
 		SimShutdownThread shutThread = new SimShutdownThread(this, scan);
 		shutThread.start();
-		
+
 		boolean lastAck = false;
 
 		for (;;) { // loop forever
 			data = ReceiveFromClient();
-			
-			String byteNumber = "";
-			
+
+			prevClientByteNumber = clientByteNumber;
+			System.out.println("prev: " + prevClientByteNumber);
+
 			switch (data[1]) {
 			case 1:
-				byteNumber = "01";
+				clientByteNumber = "01";
 				break;
 			case 2:
-				byteNumber = "02";
+				clientByteNumber = "02";
 				break;
 			case 3:
-				byteNumber = "03" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+				clientByteNumber = "03" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
 				break;
 			case 4:
-				byteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+				clientByteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
 				break;
 			}
-			
-			if (errors.containsKey(byteNumber)) {
-				int type = errors.get(byteNumber);
+			System.out.println("current: " + clientByteNumber);
+
+			if (errors.containsKey(clientByteNumber) && !(prevClientByteNumber.equals(clientByteNumber))) {
+				int type = errors.get(clientByteNumber);
 				switch (type) {
 				case 1:
 					// Losing Packet
-					data = ReceiveFromClient();
-					SendToServer(data);
+					if (data[1] == 4) {
+						data = ReceiveFromServer();
+						SendToClient(data);
+						data = ReceiveFromClient();
+						SendToServer(data);
+						data = ReceiveFromClient();
+						SendToServer(data);
+					} else {
+						data = ReceiveFromClient();
+						SendToServer(data);
+					}
 					break;
 				case 2:
 					// delaying Packet
+					System.out.println("delaying");
 					try {
-						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
+						Thread.sleep(delayAndSpace.get(clientByteNumber) * 1000);
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
+					System.out.println("sending delayed packet");
 					SendToServer(data);
+					if (data[1] == 4) {
+						if (delayAndSpace.get(clientByteNumber) * 1000 > 5000) {
+							data = ReceiveFromServer();
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 10000) {
+								data = ReceiveFromServer();
+							}
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 15000) {
+								data = ReceiveFromServer();
+							}
+						}
+					} else {
+						if (delayAndSpace.get(clientByteNumber) * 1000 > 5000) {
+							data = ReceiveFromClient();
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 10000) {
+								data = ReceiveFromClient();
+							}
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 15000) {
+								data = ReceiveFromClient();
+							}
+						}
+					}
 					break;
 				case 3:
 					// duplicating Packet
 					SendToServer(data);
 					try {
-						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
+						Thread.sleep(delayAndSpace.get(clientByteNumber) * 1000);
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
 					SendToServer(data);
+					if (data[1] == 1) {
+						if (delayAndSpace.get(clientByteNumber) * 1000 > 5000) {
+							data = ReceiveFromServer();
+							data = ReceiveFromClient();
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 10000) {
+								data = ReceiveFromServer();
+								data = ReceiveFromClient();
+							}
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 15000) {
+								data = ReceiveFromServer();
+								data = ReceiveFromClient();
+							}
+						}
+					}
+					else if (data[1] == 4) {
+						if (delayAndSpace.get(clientByteNumber) * 1000 > 5000) {
+							data = ReceiveFromServer();
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 10000) {
+								data = ReceiveFromServer();
+							}
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 15000) {
+								data = ReceiveFromServer();
+							}
+						}
+					} else {
+						if (delayAndSpace.get(clientByteNumber) * 1000 > 5000) {
+							data = ReceiveFromClient();
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 10000) {
+								data = ReceiveFromClient();
+							}
+							if (delayAndSpace.get(clientByteNumber) * 1000 > 15000) {
+								data = ReceiveFromClient();
+							}
+						}
+					}
 					break;
 				}
-			}
-			else {
+			} else {
 				SendToServer(data);
 			}
-			
+
 			if (lastAck) {
 				continue;
 			}
-			
-			data = ReceiveFromServer();
-			
-			switch (data[1]) {
-			case 1:
-				byteNumber = "01";
-				break;
-			case 2:
-				byteNumber = "02";
-				break;
-			case 3:
-				byteNumber = "03" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
-				break;
-			case 4:
-				byteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
-				break;
+
+			if (prevClientByteNumber.equals(clientByteNumber) && ((data[1] == 4) || (data[1] == 2))) {
+				continue;
 			}
-			
-			if (errors.containsKey(byteNumber)) {
-				int type = errors.get(byteNumber);
-				switch (type) {
+
+			while (true) {
+				data = ReceiveFromServer();
+
+				prevServerByteNumber = serverByteNumber;
+
+				switch (data[1]) {
 				case 1:
-					// Losing Packet
-					data = ReceiveFromServer();
-					SendToClient(data);
+					serverByteNumber = "01";
 					break;
 				case 2:
-					// delaying Packet
-					try {
-						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					SendToClient(data);
+					serverByteNumber = "02";
 					break;
 				case 3:
-					// duplicating Packet
-					SendToClient(data);
-					try {
-						Thread.sleep(delayAndSpace.get(byteNumber) * 1000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					SendToClient(data);
+					serverByteNumber = "03" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+					break;
+				case 4:
+					serverByteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
 					break;
 				}
+
+				if (errors.containsKey(serverByteNumber) && !(prevServerByteNumber.equals(serverByteNumber))) {
+					int type = errors.get(serverByteNumber);
+					switch (type) {
+					case 1:
+						// Losing Packet
+
+						if (data[1] == 4) {
+							data = ReceiveFromClient();
+							SendToServer(data);
+							data = ReceiveFromServer();
+							SendToClient(data);
+						} else {
+							data = ReceiveFromServer();
+							SendToClient(data);
+						}
+						break;
+					case 2:
+						// delaying Packet
+						System.out.println("delaying");
+						try {
+							Thread.sleep(delayAndSpace.get(serverByteNumber) * 1000);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						System.out.println("sending delayed packet");
+						SendToClient(data);
+						if (data[1] == 4) {
+							if (delayAndSpace.get(serverByteNumber) * 1000 > 5000) {
+								data = ReceiveFromClient();
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 10000) {
+									data = ReceiveFromClient();
+								}
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 15000) {
+									data = ReceiveFromClient();
+								}
+							}
+						} else {
+							if (delayAndSpace.get(serverByteNumber) * 1000 > 5000) {
+								data = ReceiveFromServer();
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 10000) {
+									data = ReceiveFromServer();
+								}
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 15000) {
+									data = ReceiveFromServer();
+								}
+							}
+						}
+						break;
+					case 3:
+						// duplicating Packet
+						SendToClient(data);
+						try {
+							Thread.sleep(delayAndSpace.get(serverByteNumber) * 1000);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+						SendToClient(data);
+						if (data[1] == 4) {
+							if (delayAndSpace.get(serverByteNumber) * 1000 > 5000) {
+								data = ReceiveFromClient();
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 10000) {
+									data = ReceiveFromClient();
+								}
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 15000) {
+									data = ReceiveFromClient();
+								}
+							}
+						} else {
+							if (delayAndSpace.get(serverByteNumber) * 1000 > 5000) {
+								data = ReceiveFromServer();
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 10000) {
+									data = ReceiveFromServer();
+								}
+								if (delayAndSpace.get(serverByteNumber) * 1000 > 15000) {
+									data = ReceiveFromServer();
+								}
+							}
+						}
+						break;
+					}
+				} else {
+					SendToClient(data);
+				}
+				if (prevServerByteNumber.equals(serverByteNumber) && data[1] == 4) {
+					continue;
+				}
+				break;
 			}
-			else {
-				SendToClient(data);
-			}
-			
-			if (data[1] == 3 && data.length < 516) {
+
+			System.out.println("length: " + data.length);
+			if (data[1] == 3 && sendPacket.getLength() < 516) {
 				lastAck = true;
 			}
 		}
@@ -170,7 +306,7 @@ public class TFTPSim {
 		byte[] data = new byte[516];
 		receivePacket = new DatagramPacket(data, data.length);
 
-		System.out.println("Simulator: Waiting for packet.");
+		System.out.println("Simulator: Waiting for packet from client");
 		// Block until a datagram packet is received from receiveSocket.
 		try {
 			receiveSocket.receive(receivePacket);
@@ -202,7 +338,7 @@ public class TFTPSim {
 	public void SendToServer(byte[] data) {
 
 		// Reset sending port on a new transfer
-		if (data[1] == 1 || data[1] == 2)
+		if ((data[1] == 1 || data[1] == 2) && !(prevClientByteNumber.equals(clientByteNumber)))
 			serverPort = 69;
 
 		try {
@@ -211,7 +347,7 @@ public class TFTPSim {
 			e1.printStackTrace();
 		}
 
-		System.out.println("Simulator: sending packet.");
+		System.out.println("Simulator: sending packet to server");
 		System.out.println("To host: " + sendPacket.getAddress());
 		System.out.println("Destination host port: " + sendPacket.getPort());
 		int len = sendPacket.getLength();
@@ -233,7 +369,7 @@ public class TFTPSim {
 		byte[] data = new byte[516];
 		receivePacket = new DatagramPacket(data, data.length);
 
-		System.out.println("Simulator: Waiting for packet.");
+		System.out.println("Simulator: Waiting for packet from server");
 		try {
 			sendReceiveSocket.receive(receivePacket);
 		} catch (IOException e) {
@@ -264,7 +400,7 @@ public class TFTPSim {
 			e1.printStackTrace();
 		}
 
-		System.out.println("Simulator: Sending packet:");
+		System.out.println("Simulator: Sending packet to client");
 		System.out.println("To host: " + sendPacket.getAddress());
 		System.out.println("Destination host port: " + sendPacket.getPort());
 		int len = sendPacket.getLength();
