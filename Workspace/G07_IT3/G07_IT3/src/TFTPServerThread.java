@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.Arrays;
 
@@ -20,6 +21,7 @@ public class TFTPServerThread extends Thread {
 	String filename, mode;
 	int j, k;
 	int block; // the number of blocks that have been read.
+	int sendPort;
 	FileInputStream input;
 	String serverDirectory = "TFTPServer";
 
@@ -35,6 +37,7 @@ public class TFTPServerThread extends Thread {
 			block = 0;
 		len = _len;
 		filename = _filename;
+		sendPort = receivePacket.getPort();
 	}
 
 	/**
@@ -171,8 +174,15 @@ public class TFTPServerThread extends Thread {
 				if (i > 3) {
 					System.out.println("Timeout: Shutting Down");
 					System.exit(0);
-				} else
+				} else {
+					int sourcePort = receivePacket.getPort();
+					if (sendPort != sourcePort) {
+						// ERROR CODE 5
+						sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
+						i--;
+					}
 					break;
+				}
 			}
 
 			if (req == "read") { // If sending data
@@ -300,5 +310,25 @@ public class TFTPServerThread extends Thread {
 
 		byte[] bytes = { 0, 4, byte1, byte2 };
 		return bytes;
+	}
+	void sendErrorPacket(int errorCode, String msg, int port, InetAddress dest) {
+		byte[] byteString = msg.getBytes();
+		byte[] errorPacket = new byte[5 + byteString.length];
+		errorPacket[0] = 0;
+		errorPacket[1] = 5;
+		errorPacket[2] = 0;
+		errorPacket[3] = (byte)errorCode;
+		for (int j = 0; j < byteString.length; j++) {
+			errorPacket[j+4] = byteString[j];
+		}
+		errorPacket[errorPacket.length - 1] = 0;
+		try {
+			sendReceiveSocket.send(new DatagramPacket(errorPacket, errorPacket.length, dest, port));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (errorCode != 5) {
+			System.exit(0);
+		}
 	}
 }

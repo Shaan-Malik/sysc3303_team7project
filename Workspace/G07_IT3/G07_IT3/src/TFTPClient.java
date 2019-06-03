@@ -193,8 +193,15 @@ public class TFTPClient {
 			if (i > 3) {
 				if (outputMode.equals("verbose")) System.out.println("Timeout: Shutting Down");
 				System.exit(0);
-			} else
+			} else {
+				int sourcePort = receivePacket.getPort();
+				if (sendPort != sourcePort) {
+					// ERROR CODE 5
+					sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
+					i--;
+				}
 				break;
+			}
 		}
 
 		try {
@@ -204,6 +211,8 @@ public class TFTPClient {
 			System.exit(1);
 		}
 
+	
+		
 		// Process the received datagram.
 		len = receivePacket.getLength();
 		if (outputMode.equals("verbose")) {
@@ -391,8 +400,15 @@ public class TFTPClient {
 				if (i > 3) {
 					if (outputMode.equals("verbose")) System.out.println("Timeout: Shutting Down");
 					System.exit(0);
-				} else
+				} else {
+					int sourcePort = receivePacket.getPort();
+					if (sendPort != sourcePort) {
+						// ERROR CODE 5
+						sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
+						i--;
+					}
 					break;
+				}
 			}
 
 			if (type == 2) { // If sending data
@@ -546,4 +562,28 @@ public class TFTPClient {
 			}
 		}
 	}
+	
+	void sendErrorPacket(int errorCode, String msg, int port, InetAddress dest) {
+		byte[] byteString = msg.getBytes();
+		byte[] errorPacket = new byte[5 + byteString.length];
+		errorPacket[0] = 0;
+		errorPacket[1] = 5;
+		errorPacket[2] = 0;
+		errorPacket[3] = (byte)errorCode;
+		for (int j = 0; j < byteString.length; j++) {
+			errorPacket[j+4] = byteString[j];
+		}
+		errorPacket[errorPacket.length - 1] = 0;
+		System.out.println("Sending ERROR" + errorCode);
+		try {
+			sendReceiveSocket.send(new DatagramPacket(errorPacket, errorPacket.length, dest, port));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (errorCode != 5) {
+			System.out.println("Shutting down");
+			System.exit(0);
+		}
+	}
 }
+
