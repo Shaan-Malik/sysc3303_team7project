@@ -228,6 +228,7 @@ public class TFTPClient {
 			}
 			System.out.println();
 		}
+		
 
 		// Initialize file I/O structures
 		File destinationFile = new File(directory + "/" + filename);
@@ -258,6 +259,34 @@ public class TFTPClient {
 			expectedBlockNum = 1;
 
 		while (true) {
+			
+			// Validate received packet
+
+			// Test Opcode
+			if (!(data[0] == 0 && ((data[1] == 3) || (data[1] == 4) || (data[1] == 5))))
+				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
+
+			// Test Error Messages
+			if (data[1] == 5) {
+
+				// Examine Formatting
+				if ((data.length < 5) || (data[data.length - 1] != 0))
+					sendErrorPacket(4, "Received Error Message has Invalid Formatting", receivePacket.getPort(),
+							receivePacket.getAddress());
+
+				// Expand in Iteration 4
+				if (!(data[2] == 2 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+					sendErrorPacket(4, "Received ErrorCode is Invalid", receivePacket.getPort(),
+							receivePacket.getAddress());
+
+			} else {
+				// Test Data or Ack
+				if (data.length < 4)
+					sendErrorPacket(4, "Received Message has Invalid Formatting", receivePacket.getPort(),
+							receivePacket.getAddress());
+
+			}
+			
 			// wait for new packet
 
 			// check if it's read or write
@@ -362,6 +391,8 @@ public class TFTPClient {
 					if (outputMode.equals("verbose")) System.out.println(
 							"\nDuplicate/Out-of-order ACK packet" + blockNumber + " " + expectedBlockNum + "\n");
 				}
+			} else if (data[1] == 5) {
+				//PRINT AND SHUTDOWN
 			}
 
 			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up

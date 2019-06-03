@@ -195,6 +195,35 @@ public class TFTPServerThread extends Thread {
 			}
 			System.out.println("Packet recieved");
 
+			
+			// Validate received packet
+			
+			// Test Opcode
+			if (!(data[0] == 0 && ((data[1] == 1) || (data[1] == 2) || (data[1] == 3) || (data[1] == 4) || (data[1] == 5))))
+				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
+
+			// Test Error Messages
+			if (data[1] == 5) {
+
+				// Examine Formatting
+				if ((data.length < 5) || (data[data.length - 1] != 0))
+					sendErrorPacket(4, "Received Error Message has Invalid Formatting", receivePacket.getPort(),
+							receivePacket.getAddress());
+
+				// Expand in Iteration 4
+				if (!(data[2] == 2 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+					sendErrorPacket(4, "Received ErrorCode is Invalid", receivePacket.getPort(),
+							receivePacket.getAddress());
+
+			} else {
+				// Test Data or Ack
+				if (data.length < 4)
+					sendErrorPacket(4, "Received Message has Invalid Formatting", receivePacket.getPort(),
+							receivePacket.getAddress());
+
+			}
+			
+			
 			// check if it's read or write
 			byte[] data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
 			int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
