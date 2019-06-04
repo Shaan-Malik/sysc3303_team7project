@@ -58,7 +58,7 @@ public class TFTPClient {
 				md, // mode as an array of bytes
 				data; // reply as array of bytes
 						// dataType as Strings
-		int j, len, sendPort;
+		int j, len, sendPort, transactionPort = -1;
 
 		// In the assignment, students are told to send to 23, so just:
 		// sendPort = 23;
@@ -195,10 +195,11 @@ public class TFTPClient {
 				System.exit(0);
 			} else {
 				int sourcePort = receivePacket.getPort();
-				if (sendPort != sourcePort) {
+				if (transactionPort == -1)transactionPort = sourcePort;
+				if (transactionPort != sourcePort) {
 					// ERROR CODE 5
+					System.out.println("Expected TID "+transactionPort+" but received TID: "+sourcePort);
 					sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
-					i--;
 				}
 				break;
 			}
@@ -433,10 +434,9 @@ public class TFTPClient {
 					System.exit(0);
 				} else {
 					int sourcePort = receivePacket.getPort();
-					if (sendPort != sourcePort) {
+					if (transactionPort != sourcePort) {
 						// ERROR CODE 5
-						sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
-						i--;
+						sendErrorPacket(5, "Incorrect TID (Wrong port)", transactionPort, receivePacket.getAddress());
 					}
 					break;
 				}
@@ -605,7 +605,7 @@ public class TFTPClient {
 			errorPacket[j+4] = byteString[j];
 		}
 		errorPacket[errorPacket.length - 1] = 0;
-		System.out.println("Sending ERROR" + errorCode);
+		System.out.println("Sending ERROR " + errorCode);
 		try {
 			sendReceiveSocket.send(new DatagramPacket(errorPacket, errorPacket.length, dest, port));
 		} catch (IOException e) {

@@ -21,7 +21,7 @@ public class TFTPServerThread extends Thread {
 	String filename, mode;
 	int j, k;
 	int block; // the number of blocks that have been read.
-	int sendPort;
+	int transactionPort;
 	FileInputStream input;
 	String serverDirectory = "TFTPServer";
 
@@ -37,7 +37,7 @@ public class TFTPServerThread extends Thread {
 			block = 0;
 		len = _len;
 		filename = _filename;
-		sendPort = receivePacket.getPort();
+		transactionPort = receivePacket.getPort();
 	}
 
 	/**
@@ -176,10 +176,9 @@ public class TFTPServerThread extends Thread {
 					System.exit(0);
 				} else {
 					int sourcePort = receivePacket.getPort();
-					if (sendPort != sourcePort) {
+					if (transactionPort != sourcePort) {
 						// ERROR CODE 5
 						sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
-						i--;
 					}
 					break;
 				}
