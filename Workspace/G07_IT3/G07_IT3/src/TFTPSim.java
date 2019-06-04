@@ -560,11 +560,11 @@ class SimShutdownThread extends Thread {
 	public void run() {
 		while (true) {
 			String s = scan.nextLine();
-			if (s.equals("reset")) {
+			if (s.equals("r")) {
 				parent.initialise();
 				break;
 			}
-			if (s.equals("shutdown")) {
+			if (s.equals("s")) {
 				try {
 					scan.close();
 					parent.shutdown();

@@ -27,10 +27,6 @@ public class TFTPClient {
 
 	String clientDirectory = "TFTPClient";
 
-	public TFTPClient() {
-
-	}
-
 	/**
 	 * Sends and Receives packets of a file from a server
 	 * 
@@ -616,5 +612,7 @@ public class TFTPClient {
 			System.exit(0);
 		}
 	}
+	
 }
+
 

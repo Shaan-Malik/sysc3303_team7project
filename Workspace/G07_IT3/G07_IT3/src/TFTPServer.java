@@ -197,7 +197,7 @@ class ServerShutdownThread extends Thread {
 	 */
 	public void run() {
 		String s = scan.nextLine();
-		if (s.equals("shutdown")) {
+		if (s.equals("s")) {
 			try {
 				parent.shutdown();
 			} catch (InterruptedException e) {
