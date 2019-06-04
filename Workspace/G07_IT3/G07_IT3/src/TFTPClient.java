@@ -256,7 +256,7 @@ public class TFTPClient {
 							receivePacket.getAddress());
 
 				// Expand in Iteration 4
-				if (!(data[2] == 2 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
 					sendErrorPacket(4, "Received ErrorCode is Invalid", receivePacket.getPort(),
 							receivePacket.getAddress());
 
@@ -396,7 +396,6 @@ public class TFTPClient {
 						try {
 							input.close();
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 						break;
@@ -406,7 +405,8 @@ public class TFTPClient {
 							"\nDuplicate/Out-of-order ACK packet" + blockNumber + " " + expectedBlockNum + "\n");
 				}
 			} else if (data[1] == 5) {
-				//PRINT AND SHUTDOWN
+				if (outputMode.equals("verbose")) System.out.println("Received Error " + Byte.toUnsignedInt(data[4])+": Shutting Down" ); 
+				System.exit(0);
 			}
 
 			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up

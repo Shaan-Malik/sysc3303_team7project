@@ -206,7 +206,7 @@ public class TFTPServerThread extends Thread {
 			// Validate received packet
 			
 			// Test Opcode
-			if (!(data[0] == 0 && ((data[1] == 1) || (data[1] == 2) || (data[1] == 3) || (data[1] == 4) || (data[1] == 5))))
+			if (!(data[0] == 0 && ((data[1] == 3) || (data[1] == 4) || (data[1] == 5))))
 				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
 
 			// Test Error Messages
@@ -218,7 +218,7 @@ public class TFTPServerThread extends Thread {
 							receivePacket.getAddress());
 
 				// Expand in Iteration 4
-				if (!(data[2] == 2 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
 					sendErrorPacket(4, "Received ErrorCode is Invalid", receivePacket.getPort(),
 							receivePacket.getAddress());
 
@@ -334,6 +334,9 @@ public class TFTPServerThread extends Thread {
 							"\nDuplicate/Out-of-order ACK packet\n" + blockNumber + " " + expectedBlockNum + "\n");
 				}
 
+			} else if (data[1] == 5) {
+				System.out.println("Received Error " + Byte.toUnsignedInt(data[4])+": Shutting Down" ); 
+				System.exit(0);
 			}
 
 		}
