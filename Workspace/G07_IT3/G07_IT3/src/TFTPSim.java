@@ -418,22 +418,14 @@ class ReceivingAndSendingThread extends Thread {
 		}
 
 		// Process the received datagram.
-		System.out.println("Simulator: Packet received From Client:");
+		System.out.print("Simulator: received ");
+		if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 5) System.out.println("ERROR");
 		System.out.println("From host: " + receivePacket.getAddress());
-		Parent.setClientPort(receivePacket.getPort());
-		System.out.println("Host port: " + Parent.getClientPort()); 
-		int len = receivePacket.getLength();
-		System.out.println("Length: " + len);
-		System.out.println("Containing: ");
-
-		// print the bytes
-		for (int j = 0; j < len; j++) {
-			System.out.println("byte " + j + " " + data[j]);
-		}
-
-		// Form a String from the byte array, and print the string.
-		String received = new String(data, 0, len);
-		System.out.println(received);
+		System.out.println("Host port: " + receivePacket.getPort());
+		System.out.println("Length: " + receivePacket.getLength()+"\n");
+		
 		return data;
 	}
 
@@ -467,15 +459,13 @@ class ReceivingAndSendingThread extends Thread {
 			}
 		}
 
-		System.out.println("Simulator: sending packet to server");
-		System.out.println("To host: " + sendPacket.getAddress());
-		System.out.println("Destination host port: " + sendPacket.getPort());
-		int len = sendPacket.getLength();
-		System.out.println("Length: " + len);
-		System.out.println("Containing: ");
-		for (int j = 0; j < len; j++) {
-			System.out.println("byte " + j + " " + data[j]);
-		}
+		System.out.print("Simulator: sending ");
+		if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 5) System.out.println("ERROR");
+		System.out.println("From host: " + sendPacket.getAddress());
+		System.out.println("Host port: " + sendPacket.getPort());
+		System.out.println("Length: " + sendPacket.getLength()+"\n");
 
 		try {
 			SendToReceiveFromServerSocket.send(sendPacket);
@@ -502,15 +492,13 @@ class ReceivingAndSendingThread extends Thread {
 		// Switch sending port while in a transfer
 		Parent.setServerPort(receivePacket.getPort());
 
-		System.out.println("Simulator: Packet received From Server:");
+		System.out.print("Simulator: received ");
+		if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 5) System.out.println("ERROR");
 		System.out.println("From host: " + receivePacket.getAddress());
 		System.out.println("Host port: " + receivePacket.getPort());
-		int len = receivePacket.getLength();
-		System.out.println("Length: " + len);
-		System.out.println("Containing: ");
-		for (int j = 0; j < len; j++) {
-			System.out.println("byte " + j + " " + data[j]);
-		}
+		System.out.println("Length: " + receivePacket.getLength()+"\n");
 
 		return data;
 	}
@@ -522,15 +510,13 @@ class ReceivingAndSendingThread extends Thread {
 			e1.printStackTrace();
 		}
 
-		System.out.println("Simulator: Sending packet to client");
-		System.out.println("To host: " + sendPacket.getAddress());
-		System.out.println("Destination host port: " + sendPacket.getPort());
-		int len = sendPacket.getLength();
-		System.out.println("Length: " + len);
-		System.out.println("Containing: ");
-		for (int j = 0; j < len; j++) {
-			System.out.println("byte " + j + " " + data[j]);
-		}
+		System.out.print("Simulator: sending ");
+		if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 5) System.out.println("ERROR");
+		System.out.println("From host: " + sendPacket.getAddress());
+		System.out.println("Host port: " + sendPacket.getPort());
+		System.out.println("Length: " + sendPacket.getLength()+"\n");
 
 		try {
 			SendToClientSocket.send(sendPacket);
