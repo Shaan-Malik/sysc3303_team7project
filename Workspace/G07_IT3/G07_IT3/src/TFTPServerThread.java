@@ -91,15 +91,15 @@ public class TFTPServerThread extends Thread {
 		// Construct a datagram packet that is to be sent to a specified port
 		// on a specified host.
 
-		System.out.println("Server: Sending packet:");
+		System.out.print("Server: Sending ");
+		if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		
 		System.out.println("To host: " + sendPacket.getAddress());
 		System.out.println("Destination host port: " + sendPacket.getPort());
 		len = sendPacket.getLength();
 		System.out.println("Length: " + len);
-		// System.out.println("Containing: ");
-		// for (j=0;j<len;j++) {
-		// System.out.println("byte " + j + " " + response[j]);
-		// }
+
 
 		// Send the datagram packet to the client via a new socket.
 
@@ -131,7 +131,7 @@ public class TFTPServerThread extends Thread {
 			}
 		}
 
-		System.out.println("Begin Sending and Receiving Data");
+		System.out.println("Begin Sending and Receiving Data\n");
 
 		int expectedBlockNum = 1;
 
@@ -192,7 +192,6 @@ public class TFTPServerThread extends Thread {
 					System.exit(1);
 				}
 			}
-			
 			
 			System.out.print("ServerThread: received ");
 			if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
@@ -272,7 +271,7 @@ public class TFTPServerThread extends Thread {
 					// Closes the stream, file is complete
 					try {
 						output.close();
-						System.out.println("output closed");
+						System.out.println("Transfer Complete\n");
 					} catch (IOException e) {
 						e.printStackTrace();
 					}

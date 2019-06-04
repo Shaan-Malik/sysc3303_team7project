@@ -148,9 +148,6 @@ public class TFTPClient {
 		// to 516 bytes long (the length of the byte array).
 		data = new byte[516];
 		receivePacket = new DatagramPacket(data, data.length);
-		if (outputMode.equals("verbose")) {
-			System.out.println("Client: Waiting for packet.");
-		}
 
 		// Timeout after 5 seconds if sending data. On timeout re-send last packet, up
 		// to three times until quit
@@ -229,7 +226,7 @@ public class TFTPClient {
 		}
 
 		if (outputMode.equals("verbose"))
-			System.out.println("Begin Receiving / Sending Data");
+			System.out.println("Begin Receiving / Sending Data\n");
 
 		int expectedBlockNum;
 
@@ -398,6 +395,7 @@ public class TFTPClient {
 						} catch (IOException e) {
 							e.printStackTrace();
 						}
+						if(outputMode.equals("verbose")) System.out.println("Transfer Complete");
 						break;
 					}
 				} else {

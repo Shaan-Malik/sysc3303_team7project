@@ -63,7 +63,10 @@ public class TFTPServer {
 			}
 
 			// Process the received datagram.
-			System.out.println("Server: Packet received:");
+			System.out.print("Server: ");
+			if(data[1] == 1) System.out.println("RRQ received");
+			else if(data[1] == 2) System.out.println("WRQ received");
+			
 			System.out.println("From host: " + receivePacket.getAddress());
 			System.out.println("Host port: " + receivePacket.getPort());
 			len = receivePacket.getLength();
@@ -77,7 +80,6 @@ public class TFTPServer {
 
 			// Form a String from the byte array.
 			String received = new String(data, 0, len);
-			System.out.println(received);
 
 			if (data[0] != 0)
 				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
@@ -101,7 +103,6 @@ public class TFTPServer {
 					sendErrorPacket(4, "Received Packet has no filename", receivePacket.getPort(), receivePacket.getAddress()); // filename is 0 bytes long
 				// otherwise, extract filename
 				filename = new String(data, 2, j - 2);
-				System.out.println("Filename: " + filename);
 
 				// check for mode
 				// search for next all 0 byte
@@ -114,6 +115,7 @@ public class TFTPServer {
 				if (k == j + 1)
 					sendErrorPacket(4, "Received Packet has no mode", receivePacket.getPort(), receivePacket.getAddress()); // mode is 0 bytes long
 				mode = new String(data, j, k - j - 1);
+				if (! ( (mode != "octet") || (mode != "netascii") )) sendErrorPacket(4, "Received Packet has incorrect mode", receivePacket.getPort(), receivePacket.getAddress());
 
 
 			if (k != len - 1)
@@ -127,13 +129,11 @@ public class TFTPServer {
 			Thread[] threadArray = new Thread[Threads.activeCount()];
 			Threads.enumerate(threadArray);
 			for (Thread thread : threadArray) {
-				System.out.println("thread name: " + thread.getName() + "filename: " + filename);
 				if (thread.getName().equals(filename))
 					fileIsFree = false;
 			}
 
 			if (fileIsFree) {
-				System.out.println("file free");
 				TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Threads, filename);
 				t.start();
 			}
