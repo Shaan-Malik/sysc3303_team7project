@@ -160,6 +160,27 @@ public class TFTPServer {
 		TFTPServer s = new TFTPServer();
 		s.receiveAndSendTFTP();
 	}
+	
+	void sendErrorPacket(int errorCode, String msg, int port, InetAddress dest) {
+		byte[] byteString = msg.getBytes();
+		byte[] errorPacket = new byte[5 + byteString.length];
+		errorPacket[0] = 0;
+		errorPacket[1] = 5;
+		errorPacket[2] = 0;
+		errorPacket[3] = (byte)errorCode;
+		for (int j = 0; j < byteString.length; j++) {
+			errorPacket[j+4] = byteString[j];
+		}
+		errorPacket[errorPacket.length - 1] = 0;
+		try {
+			receiveSocket.send(new DatagramPacket(errorPacket, errorPacket.length, dest, port));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		if (errorCode != 5) {
+			System.exit(0);
+		}
+	}
 }
 
 class ServerShutdownThread extends Thread {
@@ -176,7 +197,7 @@ class ServerShutdownThread extends Thread {
 	 */
 	public void run() {
 		String s = scan.nextLine();
-		if (s.equals("shutdown")) {
+		if (s.equals("s")) {
 			try {
 				parent.shutdown();
 			} catch (InterruptedException e) {
