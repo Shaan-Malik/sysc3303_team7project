@@ -542,4 +542,74 @@ class ReceivingAndSendingThread extends Thread {
 		System.out.println("Simulator: packet sent using port " + SendToClientSocket.getLocalPort());
 		System.out.println();
 	}
+	
+
+	/*
+	 DatagramSocket wrongSocket = null;
+	try {
+		wrongSocket = new DatagramSocket();
+	} catch (SocketException e1) {
+		// TODO Auto-generated catch block
+		e1.printStackTrace();
+	}
+		
+	try {
+		wrongSocket.send(new DatagramPacket(data, data.length));
+	} catch (IOException e2) {
+		e2.printStackTrace();
+		System.exit(1);
+	}
+	 */
+		
+	
+	/*change opcode
+	//3rd ACK = 04.0.3, 11th DATA = 03.0.11
+	int change = errorData.get(clientByteNumber)
+	data[0] = change / 256;
+	data[1] = change % 256; */
+	
+	/*delete filename
+	int index;
+	for (int x = 2; x < data.length; x++) {
+		if (data[x] == (byte)0) {
+			index = x;
+			break;
+		}
+	}
+	byte[] newData = Arrays.copyOfRange(data, index-2, data.length)
+	newData[0] = data[0];
+	newData[1] = data[1];
+	 */
+	
+	/*delete mode
+	int index;
+	for (int x = data.length - 1; x >= 2; x--) {
+		if (data[x] == (byte)0) {
+			index = x;
+			break;
+		}
+	}
+	byte[] newData = Arrays.copyOfRange(data, 0, index+1);
+	 */
+	
+	/*not formatted correctly.
+	int num = errorData.get(clientByteNumber);
+	int zeroNum = 0;
+	
+	 if (num == 7) {
+		for (int x = 2; x < data.length; x++) {
+			if (data[x] == (byte)0) {
+				index = x;
+				break;
+			}
+		}
+		byte newData = data;
+		newData.remove(index);
+	} else if (num == 8) {
+		byte[] newData = Arrays.copyOfRange(data, 0, data.length-1);
+	} 
+
+	 */
+	
+	
 }
