@@ -84,7 +84,7 @@ public class TFTPSim {
 				switch (type) {
 				case 1:
 					// Losing Packet
-					if (data[1] == 4) {
+					if (data[1] == 4) { // We have to turn to the server if we intend to drop an ack packet
 						data = ReceiveFromServer();
 						SendToClient(data);
 						data = ReceiveFromClient();
@@ -334,6 +334,18 @@ public class TFTPSim {
 		System.out.println(received);
 		return data;
 	}
+	
+	public void ReceiveAndDiscardFromClient() {
+		byte[] data = new byte[516];
+		receivePacket = new DatagramPacket(data, data.length);
+		try {
+			receiveSocket.receive(receivePacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		clientPort = receivePacket.getPort();
+	}
 
 	public void SendToServer(byte[] data) {
 
@@ -391,6 +403,18 @@ public class TFTPSim {
 		}
 
 		return data;
+	}
+	
+	public void ReceiveAndDiscardFromServer() {
+		byte[] data = new byte[516];
+		receivePacket = new DatagramPacket(data, data.length);
+		try {
+			sendReceiveSocket.receive(receivePacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+		serverPort = receivePacket.getPort();
 	}
 
 	public void SendToClient(byte[] data) {
