@@ -21,6 +21,7 @@ public class TFTPClient {
 
 	private DatagramPacket sendPacket, receivePacket;
 	private DatagramSocket sendReceiveSocket;
+	private ThreadGroup Threads;
 
 	// private InetAddress expectedAddress;
 	// private SocketAddress expectedSocket;
@@ -28,7 +29,9 @@ public class TFTPClient {
 	String clientDirectory = "TFTPClient";
 
 	public TFTPClient() {
-
+		Threads = new ThreadGroup("Parent Thread Group");
+		ClientShutdownThread shutThread = new ClientShutdownThread(this);
+		shutThread.start();
 	}
 
 	/**
@@ -616,5 +619,41 @@ public class TFTPClient {
 			System.exit(0);
 		}
 	}
+	
+	public void shutdown() throws InterruptedException {
+		Thread[] threadArray = new Thread[Threads.activeCount()];
+		Threads.enumerate(threadArray);
+		for (Thread thread : threadArray) {
+			thread.join();
+		}
+		System.out.println("Server shutting down");
+		System.exit(0);
+	}
+	
+}
+
+class ClientShutdownThread extends Thread {
+	Scanner scan;
+	TFTPClient parent;
+
+	ClientShutdownThread(TFTPClient _parent) {
+		scan = new Scanner(System.in);
+		parent = _parent;
+	}
+
+	/**
+	 * On user typing in "shutdown" this shuts the Client down
+	 */
+	public void run() {
+		String s = scan.nextLine();
+		if (s.equals("s")) {
+			try {
+				parent.shutdown();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 }
 
