@@ -54,7 +54,7 @@ public class TFTPClient {
 				md, // mode as an array of bytes
 				data; // reply as array of bytes
 						// dataType as Strings
-		int j, len, sendPort, transactionPort = -1;
+		int len, sendPort, transactionPort = -1;
 
 		// In the assignment, students are told to send to 23, so just:
 		// sendPort = 23;
@@ -115,19 +115,19 @@ public class TFTPClient {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		len = sendPacket.getLength();
+		
 		if (outputMode.equals("verbose")) {
-			System.out.println("Client: sending packet ");
+			
+			System.out.print("Client: sending ");
+			if(type == 1) System.out.println("RRQ");
+			else if(type == 2) System.out.println("WRQ");
+			
 			System.out.println("To host: " + sendPacket.getAddress());
 			System.out.println("Destination host port: " + sendPacket.getPort());
-
-			System.out.println("Length: " + len);
-			System.out.println("Containing: ");
-			for (j = 0; j < len; j++) {
-				System.out.println("byte " + j + " " + msg[j]);
-			}
+			System.out.println("Length: " + sendPacket.getLength() + "\n");
 		}
-
+		
+		
 		FileInputStream input = null;
 		FileOutputStream output = null;
 
@@ -142,9 +142,6 @@ public class TFTPClient {
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(1);
-		}
-		if (outputMode.equals("verbose")) {
-			System.out.println("Client: Packet sent.");
 		}
 
 		// Construct a DatagramPacket for receiving packets up
@@ -194,7 +191,7 @@ public class TFTPClient {
 				if (transactionPort == -1)transactionPort = sourcePort;
 				if (transactionPort != sourcePort) {
 					// ERROR CODE 5
-					System.out.println("Expected TID "+transactionPort+" but received TID: "+sourcePort);
+					if (outputMode.equals("verbose")) System.out.println("Expected TID "+transactionPort+" but received TID: "+sourcePort);
 					sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
 				}
 				break;
@@ -210,21 +207,7 @@ public class TFTPClient {
 
 	
 		
-		// Process the received datagram.
-		len = receivePacket.getLength();
-		if (outputMode.equals("verbose")) {
-			System.out.println("Client: Packet received:");
-			System.out.println("From host: " + receivePacket.getAddress());
-			System.out.println("Host port: " + receivePacket.getPort());
-
-			System.out.println("Length: " + len);
-			System.out.println("Containing: ");
-
-			for (j = 0; j < len; j++) {
-				System.out.println("byte " + j + " " + data[j]);
-			}
-			System.out.println();
-		}
+		
 		
 
 		// Initialize file I/O structures
@@ -257,6 +240,7 @@ public class TFTPClient {
 
 		while (true) {
 			
+			
 			// Validate received packet
 
 			// Test Opcode
@@ -288,6 +272,24 @@ public class TFTPClient {
 
 			// check if it's read or write
 			data = Arrays.copyOfRange(receivePacket.getData(), 0, receivePacket.getLength());
+			
+			
+			// Process the received datagram.
+			if (outputMode.equals("verbose")) {
+
+				System.out.print("Client: received ");
+				if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+				else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+				else if(data[1] == 5) System.out.println("ERROR");
+				
+				System.out.println("From host: " + receivePacket.getAddress());
+				System.out.println("Host port: " + receivePacket.getPort());
+				System.out.println("Length: " + receivePacket.getLength());
+				System.out.println();
+			}
+						
+						
+			
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// READ
@@ -314,6 +316,14 @@ public class TFTPClient {
 							receivePacket.getPort());
 				} else {
 					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), sendPort);
+				}
+				
+				if (outputMode.equals("verbose")) {
+					System.out.println("Client: sending ACK " + blockNumber );
+					System.out.println("To host: " + sendPacket.getAddress());
+					System.out.println("Destination host port: " + sendPacket.getPort());
+
+					System.out.println("Length: " + sendPacket.getLength() + "\n");
 				}
 
 				try {
@@ -366,6 +376,13 @@ public class TFTPClient {
 								receivePacket.getPort());
 					} else {
 						sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), sendPort);
+					}
+					
+					if (outputMode.equals("verbose")) {
+						System.out.println("Client: sending DATA " + blockNumber );
+						System.out.println("To host: " + sendPacket.getAddress());
+						System.out.println("Destination host port: " + sendPacket.getPort());
+						System.out.println("Length: " + sendPacket.getLength() + "\n");
 					}
 
 					try {
@@ -459,7 +476,7 @@ public class TFTPClient {
 		Scanner scan = new Scanner(System.in);
 		int type, testModeInt;
 		String filename, datatype, outputMode, directory;
-		System.out.println("TFTP Client: Interation 2\n");
+		System.out.println("TFTP Client: Interation 3\n");
 		datatype = "octet";
 		while (true) {
 			System.out.print("Enter read or write request: \n");

@@ -192,8 +192,16 @@ public class TFTPServerThread extends Thread {
 					System.exit(1);
 				}
 			}
-			System.out.println("Packet recieved");
-
+			
+			
+			System.out.print("ServerThread: received ");
+			if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+			else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+			else if(data[1] == 5) System.out.println("ERROR");
+			System.out.println("From host: " + receivePacket.getAddress());
+			System.out.println("Host port: " + receivePacket.getPort());
+			System.out.println("Length: " + receivePacket.getLength()+"\n");
+			
 			
 			// Validate received packet
 			
@@ -249,6 +257,11 @@ public class TFTPServerThread extends Thread {
 				sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
 						receivePacket.getPort());
 
+				System.out.println("ServerThread: sending ACK " + blockNumber );
+				System.out.println("To host: " + sendPacket.getAddress());
+				System.out.println("Destination host port: " + sendPacket.getPort());
+				System.out.println("Length: " + sendPacket.getLength() + "\n");
+				
 				try {
 					sendReceiveSocket.send(sendPacket);
 				} catch (IOException e) {
@@ -294,6 +307,11 @@ public class TFTPServerThread extends Thread {
 					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
 							receivePacket.getPort());
 
+					System.out.println("ServerThread: sending DATA " + blockNumber );
+					System.out.println("To host: " + sendPacket.getAddress());
+					System.out.println("Destination host port: " + sendPacket.getPort());
+					System.out.println("Length: " + sendPacket.getLength() + "\n");
+					
 					try {
 						sendReceiveSocket.send(sendPacket);
 					} catch (IOException e) {
