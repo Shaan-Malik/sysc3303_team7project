@@ -20,7 +20,7 @@ public class TFTPSim {
 
 	// UDP datagram packets and sockets used to send / receive
 	private static HashMap<String, Integer> errors;
-	private static HashMap<String, Integer> delayAndSpace;
+	private static HashMap<String, Integer> errorData;
 	protected DatagramSocket SendToReceiveFromServerSocket, ReceiveFromClientSocket, SendToClientSocket;
 	private static TFTPSim sim;
 	private static Scanner scan;
@@ -28,7 +28,7 @@ public class TFTPSim {
 	private static int serverPort;
 	ReceivingAndSendingThread ClientThread;
 	ReceivingAndSendingThread ServerThread;
-	
+
 	public TFTPSim() {
 	}
 
@@ -63,12 +63,13 @@ public class TFTPSim {
 			System.exit(1);
 		}
 
-		ClientThread = new ReceivingAndSendingThread(SendToReceiveFromServerSocket, ReceiveFromClientSocket, SendToClientSocket, this, "Client", errors, delayAndSpace);
+		ClientThread = new ReceivingAndSendingThread(SendToReceiveFromServerSocket, ReceiveFromClientSocket,
+				SendToClientSocket, this, "Client", errors, errorData);
 		ClientThread.start();
-		ServerThread = new ReceivingAndSendingThread(SendToReceiveFromServerSocket, ReceiveFromClientSocket, SendToClientSocket, this, "Server", errors, delayAndSpace);
+		ServerThread = new ReceivingAndSendingThread(SendToReceiveFromServerSocket, ReceiveFromClientSocket,
+				SendToClientSocket, this, "Server", errors, errorData);
 		ServerThread.start();
 	}
-
 
 	/**
 	 * Shuts down the currently active error simulator
@@ -79,18 +80,16 @@ public class TFTPSim {
 		System.out.println("Sim shutting down");
 		System.exit(0);
 	}
-	
-	
 
 	public void initialise() {
 		errors.clear();
-		delayAndSpace.clear();
+		errorData.clear();
 		scan = new Scanner(System.in);
 		int type, packetNumber, timeOrSpace;
 		String byteNumber = null;
 		String packetType;
 		boolean scanning;
-		System.out.println("Error Collection Test Program\n");
+		System.out.println("Error Simulator Iteration 3\n");
 		while (true) {
 			scanning = true;
 			type = 0;
@@ -99,7 +98,7 @@ public class TFTPSim {
 			while (scanning) {
 				try {
 					System.out.print(
-							"Enter 0 if finished. Enter 1 for loss, 2 for delay, or 3 for duplicate. Enter 4 to shutdown.\n");
+							"Enter 0 if finished. Enter 1 for losing, delaying, or duplicating packets. Enter 2 for creating errors. Enter 3 to shutdown.\n");
 					type = Integer.parseInt(scan.nextLine());
 					scanning = false;
 				} catch (Exception InputMismatchException) {
@@ -111,8 +110,219 @@ public class TFTPSim {
 				System.out.println("Finished Initialisation");
 				passOnTFTP();
 				break;
+			} else if (type == 1) {
+				scanning = true;
+				while (scanning) {
+					try {
+						System.out.print("Enter 1 for loss, 2 for delay, or 3 for duplicate. Enter 4 to exit menu.\n");
+						type = Integer.parseInt(scan.nextLine());
+						scanning = false;
+					} catch (Exception InputMismatchException) {
+						System.out.println("Invalid input");
+						continue;
+					}
+				}
+				if (type == 4) {
+					continue;
+				}
+				System.out.print("Enter the packet you want to simulate an error for: RRQ, WRQ, ACK, DATA \n");
+				packetType = scan.nextLine();
+				if (packetType.toLowerCase().equals("ack") || packetType.toLowerCase().equals("data")) {
+					scanning = true;
+					while (scanning) {
+						try {
+							System.out.print("Enter the block number of the packet: \n");
+							packetNumber = Integer.parseInt(scan.nextLine());
+							scanning = false;
+						} catch (Exception InputMismatchException) {
+							System.out.println("Invalid input");
+							continue;
+						}
+					}
+				}
+				if (type > 1) {
+					scanning = true;
+					while (scanning) {
+						try {
+							if (type == 2) {
+								System.out.print("Enter the delay time in seconds: \n");
+							} else if (type == 3) {
+								System.out.print("Enter the space between duplicates: \n");
+							}
+							timeOrSpace = Integer.parseInt(scan.nextLine());
+							scanning = false;
+						} catch (Exception InputMismatchException) {
+							System.out.println("Invalid input");
+							continue;
+						}
+					}
+				}
+				if (packetType.toLowerCase().equals("rrq")) {
+					byteNumber = "01";
+				} else if (packetType.toLowerCase().equals("wrq")) {
+					byteNumber = "02";
+				} else if (packetType.toLowerCase().equals("ack")) {
+					int b1 = packetNumber / 256;
+					int b2 = packetNumber % 256;
+					byteNumber = "04" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
+				} else if (packetType.toLowerCase().equals("data")) {
+					int b1 = packetNumber / 256;
+					int b2 = packetNumber % 256;
+					byteNumber = "03" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
+				} else {
+					System.out.println("Invalid input");
+					continue;
+				}
+				errors.put(byteNumber, type);
+				if (packetType.toLowerCase().equals("data") || packetType.toLowerCase().equals("ack")) {
+					errorData.put(byteNumber, timeOrSpace);
+				}
+				switch(type) {
+				case 1:
+					System.out.println("Losing Packet Error Added Successfully\n");
+					break;
+				case 2:
+					System.out.println("Delaying Packet Error Added Successfully\n");
+					break;
+				case 3:
+					System.out.println("Duplicating Packet Error Added Successfully\n");
+					break;
+				}
 			}
-			if (type == 4) {
+			else if (type == 2) {
+				scanning = true;
+				while (scanning) {
+					try {
+						System.out.print("Enter 1 to change opcode, 2 to delete filename, 3 to delete mode, 4 to change formatting of request. Enter 5 to exit menu.\n");
+						type = Integer.parseInt(scan.nextLine());
+						scanning = false;
+					} catch (Exception InputMismatchException) {
+						System.out.println("Invalid input");
+						continue;
+					}
+				}
+				if (type == 5) {
+					continue;
+				}
+				else if (type == 1) {
+					int opCode = 0;
+					System.out.print("Enter the packet you want to change the opcode for: RRQ, WRQ, ACK, DATA \n");
+					packetType = scan.nextLine();
+					if (packetType.toLowerCase().equals("ack") || packetType.toLowerCase().equals("data")) {
+						scanning = true;
+						while (scanning) {
+							try {
+								System.out.print("Enter the block number of the packet: \n");
+								packetNumber = Integer.parseInt(scan.nextLine());
+								scanning = false;
+							} catch (Exception InputMismatchException) {
+								System.out.println("Invalid input");
+								continue;
+							}
+						}
+						scanning = true;
+						while (scanning) {
+							try {
+								System.out.print("Enter the new opcode of the packet: \n");
+								opCode = Integer.parseInt(scan.nextLine());
+								scanning = false;
+							} catch (Exception InputMismatchException) {
+								System.out.println("Invalid input");
+								continue;
+							}
+						}
+					}
+					if (packetType.toLowerCase().equals("rrq")) {
+						byteNumber = "01";
+					} else if (packetType.toLowerCase().equals("wrq")) {
+						byteNumber = "02";
+					} else if (packetType.toLowerCase().equals("ack")) {
+						int b1 = packetNumber / 256;
+						int b2 = packetNumber % 256;
+						byteNumber = "04" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
+					} else if (packetType.toLowerCase().equals("data")) {
+						int b1 = packetNumber / 256;
+						int b2 = packetNumber % 256;
+						byteNumber = "03" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
+					} else {
+						System.out.println("Invalid input");
+						continue;
+					}
+					errors.put(byteNumber, 4);
+					if (packetType.toLowerCase().equals("data") || packetType.toLowerCase().equals("ack")) {
+						errorData.put(byteNumber, opCode);
+					}
+					System.out.println("Op Code Successfully Changed\n");
+				}
+				else if (type == 2) {
+					System.out.print("Enter the packet you want to delete the filename for for: RRQ or WRQ \n");
+					packetType = scan.nextLine();
+					if (packetType.toLowerCase().equals("rrq")) {
+						byteNumber = "01";
+					} else if (packetType.toLowerCase().equals("wrq")) {
+						byteNumber = "02";
+					}
+					else {
+						System.out.println("Invalid input");
+						continue;
+					}
+					errors.put(byteNumber, 5);
+					System.out.println("File Name Successfully Deleted\n");
+				}
+				else if (type == 3) {
+					System.out.print("Enter the packet you want to delete the mode for: RRQ or WRQ \n");
+					packetType = scan.nextLine();
+					if (packetType.toLowerCase().equals("rrq")) {
+						byteNumber = "01";
+					} else if (packetType.toLowerCase().equals("wrq")) {
+						byteNumber = "02";
+					}
+					else {
+						System.out.println("Invalid input");
+						continue;
+					}
+					errors.put(byteNumber, 6);
+					System.out.println("Mode Successfully Deleted\n");
+				}
+				else if (type == 4) {
+					System.out.print("Enter the packet you want to change the format for: RRQ or WRQ \n");
+					packetType = scan.nextLine();
+					if (packetType.toLowerCase().equals("rrq")) {
+						byteNumber = "01";
+					} else if (packetType.toLowerCase().equals("wrq")) {
+						byteNumber = "02";
+					}
+					else {
+						System.out.println("Invalid input");
+						continue;
+					}
+					scanning = true;
+					int errorType = 0;
+					while (scanning) {
+						try {
+							System.out.print("Enter 1 to delete the first 0, enter 2 to delete the second. \n");
+							errorType = Integer.parseInt(scan.nextLine());
+							scanning = false;
+						} catch (Exception InputMismatchException) {
+							System.out.println("Invalid input");
+							continue;
+						}
+					}
+					if (errorType == 1) {
+						errors.put(byteNumber, 7);
+						System.out.println("First 0 Seperator Successfully Deleted\n");
+					}
+					else if (errorType == 2) {
+						errors.put(byteNumber, 8);
+						System.out.println("Second 0 Seperator Successfully Deleted\n");
+					}
+					else {
+						System.out.println("Invalid input");
+						continue;
+					}
+				}
+			}
+			else if (type == 3) {
 				try {
 					scan.close();
 					shutdown();
@@ -120,74 +330,25 @@ public class TFTPSim {
 					e.printStackTrace();
 				}
 			}
-			if (type != 1 && type != 2 && type != 3) {
+			else if (type != 1 && type != 2 && type != 3 && type != 0) {
 				System.out.println("Invalid request type");
 				continue;
 			}
-			System.out.print("Enter the request you want to simulate: RRQ, WRQ, ACK, DATA \n");
-			packetType = scan.nextLine();
-			if (packetType.toLowerCase().equals("ack") || packetType.toLowerCase().equals("data")) {
-				scanning = true;
-				while (scanning) {
-					try {
-						System.out.print("Enter the number of the packet: \n");
-						packetNumber = Integer.parseInt(scan.nextLine());
-						scanning = false;
-					} catch (Exception InputMismatchException) {
-						System.out.println("Invalid input");
-						continue;
-					}
-				}
-			}
-			if (type > 1) {
-				scanning = true;
-				while (scanning) {
-					try {
-						if (type == 2) {
-							System.out.print("Enter the delay time in seconds: \n");
-						} else if (type == 3) {
-							System.out.print("Enter the space between duplicates: \n");
-						}
-						timeOrSpace = Integer.parseInt(scan.nextLine());
-						scanning = false;
-					} catch (Exception InputMismatchException) {
-						System.out.println("Invalid input");
-						continue;
-					}
-				}
-			}
-			if (packetType.toLowerCase().equals("rrq")) {
-				byteNumber = "01";
-			} else if (packetType.toLowerCase().equals("wrq")) {
-				byteNumber = "02";
-			} else if (packetType.toLowerCase().equals("ack")) {
-				int b1 = packetNumber / 256;
-				int b2 = packetNumber % 256;
-				byteNumber = "04" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
-			} else if (packetType.toLowerCase().equals("data")) {
-				int b1 = packetNumber / 256;
-				int b2 = packetNumber % 256;
-				byteNumber = "03" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
-			} else {
-				System.out.println("Invalid input");
-				continue;
-			}
-			errors.put(byteNumber, type);
-			delayAndSpace.put(byteNumber, timeOrSpace);
-
-			System.out.println("\nRequest initialisation successful\n");
 		}
 	}
-	
+
 	public int getClientPort() {
 		return clientPort;
 	}
+
 	public void setClientPort(int newClientPort) {
 		clientPort = newClientPort;
 	}
+
 	public int getServerPort() {
 		return serverPort;
 	}
+
 	public void setServerPort(int newServerPort) {
 		serverPort = newServerPort;
 	}
@@ -196,7 +357,7 @@ public class TFTPSim {
 		sim = new TFTPSim();
 		errors = new HashMap<>(); // stores a key-value pair: the unique code based on block
 									// number, and the type of error
-		delayAndSpace = new HashMap<>(); // stores either the delay time or space between
+		errorData = new HashMap<>(); // stores either the delay time or space between
 											// duplicates.
 		sim.initialise();
 	}
@@ -240,24 +401,26 @@ class ReceivingAndSendingThread extends Thread {
 	private DatagramPacket sendPacket, receivePacket;
 	private DatagramSocket SendToReceiveFromServerSocket, ReceiveFromClientSocket, SendToClientSocket;
 	private static HashMap<String, Integer> Errors;
-	private static HashMap<String, Integer> DelayAndSpace;
+	private static HashMap<String, Integer> ErrorData;
 	private String clientByteNumber = "";
 	private String serverByteNumber = "";
 	private String prevClientByteNumber = "";
 	private String prevServerByteNumber = "";
 	private TFTPSim Parent;
 	private boolean threadStopped = false;
-	
-	ReceivingAndSendingThread(DatagramSocket sendToReceiveFromServerSocket, DatagramSocket receiveFromClientSocket, DatagramSocket sendToClientSocket, TFTPSim parent, String hostName, HashMap<String, Integer> errors, HashMap<String, Integer> delayAndSpace){
+
+	ReceivingAndSendingThread(DatagramSocket sendToReceiveFromServerSocket, DatagramSocket receiveFromClientSocket,
+			DatagramSocket sendToClientSocket, TFTPSim parent, String hostName, HashMap<String, Integer> errors,
+			HashMap<String, Integer> errorData) {
 		HostName = hostName;
 		SendToReceiveFromServerSocket = sendToReceiveFromServerSocket;
 		ReceiveFromClientSocket = receiveFromClientSocket;
 		SendToClientSocket = sendToClientSocket;
 		this.Parent = parent;
 		Errors = errors;
-		DelayAndSpace = delayAndSpace;
+		ErrorData = errorData;
 	}
-	
+
 	public void run() {
 		byte[] data;
 		if (HostName.equals("Server")) {
@@ -303,7 +466,7 @@ class ReceivingAndSendingThread extends Thread {
 						// delaying Packet
 						System.out.println("delaying");
 						try {
-							Thread.sleep(DelayAndSpace.get(serverByteNumber) * 1000);
+							Thread.sleep(ErrorData.get(serverByteNumber) * 1000);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
@@ -314,7 +477,7 @@ class ReceivingAndSendingThread extends Thread {
 						// duplicating Packet
 						SendToClient(data);
 						try {
-							Thread.sleep(DelayAndSpace.get(serverByteNumber) * 1000);
+							Thread.sleep(ErrorData.get(serverByteNumber) * 1000);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
@@ -325,13 +488,10 @@ class ReceivingAndSendingThread extends Thread {
 					SendToClient(data);
 				}
 				/*
-				if (data[1] == 3 && sendPacket.getLength() < 516) {
-					lastAck = true;
-				}
-				*/
+				 * if (data[1] == 3 && sendPacket.getLength() < 516) { lastAck = true; }
+				 */
 			}
-		}
-		else if (HostName.equals("Client")) {
+		} else if (HostName.equals("Client")) {
 			while (true) {
 				data = ReceiveFromClient();
 				if (threadStopped) {
@@ -377,7 +537,7 @@ class ReceivingAndSendingThread extends Thread {
 					case 2:
 						// delaying Packet
 						try {
-							Thread.sleep(DelayAndSpace.get(clientByteNumber) * 1000);
+							Thread.sleep(ErrorData.get(clientByteNumber) * 1000);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
@@ -387,7 +547,7 @@ class ReceivingAndSendingThread extends Thread {
 						// duplicating Packet
 						SendToServer(data);
 						try {
-							Thread.sleep(DelayAndSpace.get(clientByteNumber) * 1000);
+							Thread.sleep(ErrorData.get(clientByteNumber) * 1000);
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
@@ -399,9 +559,9 @@ class ReceivingAndSendingThread extends Thread {
 				}
 			}
 		}
-		//return
+		// return
 	}
-	
+
 	public byte[] ReceiveFromClient() {
 		byte[] data = new byte[516];
 		receivePacket = new DatagramPacket(data, data.length);
@@ -411,17 +571,17 @@ class ReceivingAndSendingThread extends Thread {
 		try {
 			ReceiveFromClientSocket.receive(receivePacket);
 		} catch (IOException e) {
-			//e.printStackTrace();
+			// e.printStackTrace();
 			threadStopped = true;
 			return data;
-			//System.exit(1);
+			// System.exit(1);
 		}
 
 		// Process the received datagram.
 		System.out.println("Simulator: Packet received From Client:");
 		System.out.println("From host: " + receivePacket.getAddress());
 		Parent.setClientPort(receivePacket.getPort());
-		System.out.println("Host port: " + Parent.getClientPort()); 
+		System.out.println("Host port: " + Parent.getClientPort());
 		int len = receivePacket.getLength();
 		System.out.println("Length: " + len);
 		System.out.println("Containing: ");
@@ -440,28 +600,16 @@ class ReceivingAndSendingThread extends Thread {
 	public void SendToServer(byte[] data) {
 
 		// Reset sending port on a new transfer
-		/*
-		if (data[1] == 1 || data[1] == 2) {
-			System.out.println("test");
-			Parent.setServerPort(69);
-		}
-		*/
-		/*
-		if ((data[1] == 1 || data[1] == 2) && !(prevClientByteNumber.equals(clientByteNumber))) {
-			System.out.println("test");
-			Parent.setServerPort(69);
-		}
-		*/
 		if (data[1] == 1 || data[1] == 2) {
 			try {
 				sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(), 69);
 			} catch (UnknownHostException e1) {
 				e1.printStackTrace();
 			}
-		}
-		else {
+		} else {
 			try {
-				sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(), Parent.getServerPort());
+				sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(),
+						Parent.getServerPort());
 			} catch (UnknownHostException e1) {
 				e1.printStackTrace();
 			}
@@ -481,7 +629,7 @@ class ReceivingAndSendingThread extends Thread {
 			SendToReceiveFromServerSocket.send(sendPacket);
 		} catch (IOException e) {
 			e.printStackTrace();
-			//System.exit(1);
+			// System.exit(1);
 		}
 	}
 
@@ -493,10 +641,10 @@ class ReceivingAndSendingThread extends Thread {
 		try {
 			SendToReceiveFromServerSocket.receive(receivePacket);
 		} catch (IOException e) {
-			//e.printStackTrace();
+			// e.printStackTrace();
 			threadStopped = true;
 			return data;
-			//System.exit(1);
+			// System.exit(1);
 		}
 
 		// Switch sending port while in a transfer
@@ -517,7 +665,8 @@ class ReceivingAndSendingThread extends Thread {
 
 	public void SendToClient(byte[] data) {
 		try {
-			sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(), Parent.getClientPort());
+			sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(),
+					Parent.getClientPort());
 		} catch (UnknownHostException e1) {
 			e1.printStackTrace();
 		}
