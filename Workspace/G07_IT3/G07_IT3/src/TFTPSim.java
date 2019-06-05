@@ -123,7 +123,7 @@ public class TFTPSim {
 						continue;
 					}
 				}
-				if (type == 4) {
+				if (type != 1 && type != 2 && type != 3) {
 					continue;
 				}
 				System.out.print("Enter the packet you want to simulate an error for: RRQ, WRQ, ACK, DATA \n");
@@ -175,7 +175,7 @@ public class TFTPSim {
 					continue;
 				}
 				errors.put(byteNumber, type);
-				if (packetType.toLowerCase().equals("data") || packetType.toLowerCase().equals("ack")) {
+				if (type != 1) {
 					errorData.put(byteNumber, timeOrSpace);
 				}
 				switch (type) {
@@ -312,26 +312,20 @@ public class TFTPSim {
 					}
 				}
 			} else if (type == 3) {
-				System.out.print("Enter the packet you want to send from the wrong port: RRQ, WRQ, ACK, DATA \n");
+				System.out.print("Enter the packet you want to send from the wrong port: ACK or DATA \n");
 				packetType = scan.nextLine();
-				if (packetType.toLowerCase().equals("ack") || packetType.toLowerCase().equals("data")) {
-					scanning = true;
-					while (scanning) {
-						try {
-							System.out.print("Enter the block number of the packet: \n");
-							packetNumber = Integer.parseInt(scan.nextLine());
-							scanning = false;
-						} catch (Exception InputMismatchException) {
-							System.out.println("Invalid input");
-							continue;
-						}
+				scanning = true;
+				while (scanning) {
+					try {
+						System.out.print("Enter the block number of the packet: \n");
+						packetNumber = Integer.parseInt(scan.nextLine());
+						scanning = false;
+					} catch (Exception InputMismatchException) {
+						System.out.println("Invalid input");
+						continue;
 					}
 				}
-				if (packetType.toLowerCase().equals("rrq")) {
-					byteNumber = "01";
-				} else if (packetType.toLowerCase().equals("wrq")) {
-					byteNumber = "02";
-				} else if (packetType.toLowerCase().equals("ack")) {
+				if (packetType.toLowerCase().equals("ack")) {
 					int b1 = packetNumber / 256;
 					int b2 = packetNumber % 256;
 					byteNumber = "04" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
@@ -521,13 +515,13 @@ class ReceivingAndSendingThread extends Thread {
 						// Delete Filename
 						System.out.println("deleting filename");
 						index = 0;
-						for (int x = 2; x < receivePacket.getLength(); x++) {
+						for (int x = 2; x < data.length; x++) {
 							if (data[x] == (byte) 0) {
 								index = x;
 								break;
 							}
 						}
-						newData = Arrays.copyOfRange(data, index - 2, receivePacket.getLength());
+						newData = Arrays.copyOfRange(data, index - 2, data.length);
 						newData[0] = data[0];
 						newData[1] = data[1];
 						SendToClient(newData);
@@ -536,7 +530,7 @@ class ReceivingAndSendingThread extends Thread {
 						// Delete Mode
 						System.out.println("deleting mode");
 						index = 0;
-						for (int x = 2; x < receivePacket.getLength(); x++) {
+						for (int x = 2; x < data.length; x++) {
 							if (data[x] == (byte) 0) {
 								index = x;
 								break;
@@ -548,13 +542,13 @@ class ReceivingAndSendingThread extends Thread {
 						break;
 					case 7:
 						System.out.println("deleting first zero");
-						for (int x = 2; x < receivePacket.getLength(); x++) {
+						for (int x = 2; x < data.length; x++) {
 							if (data[x] == (byte) 0) {
 								index = x;
 								break;
 							}
 						}
-						byte[] newSmallerData = new byte[receivePacket.getLength() - 1];
+						byte[] newSmallerData = new byte[data.length - 1];
 						for (int i = 0; i < newSmallerData.length; i++) {
 							if (i < index) {
 								newSmallerData[i] = data[i];
@@ -566,7 +560,7 @@ class ReceivingAndSendingThread extends Thread {
 						break;
 					case 8:
 						System.out.println("deleting second zero");
-						newData = Arrays.copyOfRange(data, 0, receivePacket.getLength() - 1);
+						newData = Arrays.copyOfRange(data, 0, data.length - 1);
 						SendToClient(newData);
 						break;
 					case 9:
@@ -578,7 +572,7 @@ class ReceivingAndSendingThread extends Thread {
 							e1.printStackTrace();
 						}
 						try {
-							wrongSocket.send(new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(),
+							wrongSocket.send(new DatagramPacket(data, data.length, InetAddress.getLocalHost(),
 									Parent.getClientPort()));
 						} catch (IOException e2) {
 							e2.printStackTrace();
@@ -668,19 +662,24 @@ class ReceivingAndSendingThread extends Thread {
 						int change = ErrorData.get(clientByteNumber);
 						data[0] = (byte) (change / 256);
 						data[1] = (byte) (change % 256);
-						SendToServer(data);
+						try {
+							SendToReceiveFromServerSocket.send(new DatagramPacket(data, data.length, InetAddress.getLocalHost(), 69));
+						} catch (IOException e) {
+							e.printStackTrace();
+							System.exit(1);
+						}
 						break;
 					case 5:
 						// Delete Filename
 						System.out.println("deleting filename");
 						index = 0;
-						for (int x = 2; x < receivePacket.getLength(); x++) {
+						for (int x = 2; x < data.length; x++) {
 							if (data[x] == (byte) 0) {
 								index = x;
 								break;
 							}
 						}
-						newData = Arrays.copyOfRange(data, index - 2, receivePacket.getLength());
+						newData = Arrays.copyOfRange(data, index - 2, data.length);
 						newData[0] = data[0];
 						newData[1] = data[1];
 						SendToServer(newData);
@@ -689,7 +688,7 @@ class ReceivingAndSendingThread extends Thread {
 						// Delete Mode
 						System.out.println("deleting mode");
 						index = 0;
-						for (int x = 2; x < receivePacket.getLength(); x++) {
+						for (int x = 2; x < data.length; x++) {
 							if (data[x] == (byte) 0) {
 								index = x;
 								break;
@@ -701,13 +700,13 @@ class ReceivingAndSendingThread extends Thread {
 						break;
 					case 7:
 						System.out.println("deleting first zero");
-						for (int x = 2; x < receivePacket.getLength(); x++) {
+						for (int x = 2; x < data.length; x++) {
 							if (data[x] == (byte) 0) {
 								index = x;
 								break;
 							}
 						}
-						byte[] newSmallerData = new byte[receivePacket.getLength() - 1];
+						byte[] newSmallerData = new byte[data.length - 1];
 						for (int i = 0; i < newSmallerData.length; i++) {
 							if (i < index) {
 								newSmallerData[i] = data[i];
@@ -719,7 +718,7 @@ class ReceivingAndSendingThread extends Thread {
 						break;
 					case 8:
 						System.out.println("deleting second zero");
-						newData = Arrays.copyOfRange(data, 0, receivePacket.getLength() - 1);
+						newData = Arrays.copyOfRange(data, 0, data.length - 1);
 						SendToServer(newData);
 						break;
 					case 9:
@@ -731,7 +730,7 @@ class ReceivingAndSendingThread extends Thread {
 							e1.printStackTrace();
 						}
 						try {
-							wrongSocket.send(new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(),
+							wrongSocket.send(new DatagramPacket(data, data.length, InetAddress.getLocalHost(),
 									Parent.getServerPort()));
 						} catch (IOException e2) {
 							e2.printStackTrace();
@@ -748,9 +747,9 @@ class ReceivingAndSendingThread extends Thread {
 	}
 
 	public byte[] ReceiveFromClient() {
-		byte[] data = new byte[516];
-		receivePacket = new DatagramPacket(data, data.length);
-
+		byte[] incomingData = new byte[516];
+		receivePacket = new DatagramPacket(incomingData, incomingData.length);
+	
 		System.out.println("Simulator: Waiting for packet from client");
 		// Block until a datagram packet is received from receiveSocket.
 		try {
@@ -758,8 +757,12 @@ class ReceivingAndSendingThread extends Thread {
 		} catch (IOException e) {
 			// e.printStackTrace();
 			threadStopped = true;
-			return data;
+			return incomingData;
 			// System.exit(1);
+		}
+		byte[] data = new byte[receivePacket.getLength()];
+		for (int i = 0; i < receivePacket.getLength(); i++) {
+			data[i] = incomingData[i];
 		}
 
 		// Process the received datagram.
@@ -782,13 +785,13 @@ class ReceivingAndSendingThread extends Thread {
 		// Reset sending port on a new transfer
 		if (data[1] == 1 || data[1] == 2) {
 			try {
-				sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(), 69);
+				sendPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(), 69);
 			} catch (UnknownHostException e1) {
 				e1.printStackTrace();
 			}
 		} else {
 			try {
-				sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(),
+				sendPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(),
 						Parent.getServerPort());
 			} catch (UnknownHostException e1) {
 				e1.printStackTrace();
@@ -815,17 +818,21 @@ class ReceivingAndSendingThread extends Thread {
 	}
 
 	public byte[] ReceiveFromServer() {
-		byte[] data = new byte[516];
-		receivePacket = new DatagramPacket(data, data.length);
-
+		byte[] incomingData = new byte[516];
+		receivePacket = new DatagramPacket(incomingData, incomingData.length);
+		
 		System.out.println("Simulator: Waiting for packet from server");
 		try {
 			SendToReceiveFromServerSocket.receive(receivePacket);
 		} catch (IOException e) {
 			// e.printStackTrace();
 			threadStopped = true;
-			return data;
+			return incomingData;
 			// System.exit(1);
+		}
+		byte[] data = new byte[receivePacket.getLength()];
+		for (int i = 0; i < receivePacket.getLength(); i++) {
+			data[i] = incomingData[i];
 		}
 
 		// Switch sending port while in a transfer
@@ -847,7 +854,7 @@ class ReceivingAndSendingThread extends Thread {
 
 	public void SendToClient(byte[] data) {
 		try {
-			sendPacket = new DatagramPacket(data, receivePacket.getLength(), InetAddress.getLocalHost(),
+			sendPacket = new DatagramPacket(data, data.length, InetAddress.getLocalHost(),
 					Parent.getClientPort());
 		} catch (UnknownHostException e1) {
 			e1.printStackTrace();
