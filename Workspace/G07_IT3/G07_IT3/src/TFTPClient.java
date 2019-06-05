@@ -149,9 +149,6 @@ public class TFTPClient {
 		// to 516 bytes long (the length of the byte array).
 		data = new byte[516];
 		receivePacket = new DatagramPacket(data, data.length);
-		if (outputMode.equals("verbose")) {
-			System.out.println("Client: Waiting for packet.");
-		}
 
 		// Timeout after 5 seconds if sending data. On timeout re-send last packet, up
 		// to three times until quit
@@ -229,7 +226,7 @@ public class TFTPClient {
 		}
 
 		if (outputMode.equals("verbose"))
-			System.out.println("Begin Receiving / Sending Data");
+			System.out.println("Begin Receiving / Sending Data\n");
 
 		int expectedBlockNum;
 
@@ -255,7 +252,7 @@ public class TFTPClient {
 							receivePacket.getAddress());
 
 				// Expand in Iteration 4
-				if (!(data[2] == 2 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
 					sendErrorPacket(4, "Received ErrorCode is Invalid", receivePacket.getPort(),
 							receivePacket.getAddress());
 
@@ -396,9 +393,9 @@ public class TFTPClient {
 						try {
 							input.close();
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
+						if(outputMode.equals("verbose")) System.out.println("Transfer Complete");
 						break;
 					}
 				} else {
@@ -408,6 +405,13 @@ public class TFTPClient {
 				}
 			} else if (data[1] == 5) {
 				// PRINT AND SHUTDOWN
+				if (data[3] == 5) {
+					if (outputMode.equals("verbose")) System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1))));
+				}
+				else {
+					if (outputMode.equals("verbose")) System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + " Shutting Down" ); 
+					System.exit(0);
+				}
 			}
 
 			// Timeout after 5 seconds if sending data. On timeout re-send last packet, up
@@ -452,7 +456,9 @@ public class TFTPClient {
 					int sourcePort = receivePacket.getPort();
 					if (transactionPort != sourcePort) {
 						// ERROR CODE 5
-						sendErrorPacket(5, "Incorrect TID (Wrong port)", transactionPort, receivePacket.getAddress());
+						sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
+						i--;
+						continue;
 					}
 					break;
 				}
@@ -621,7 +627,8 @@ public class TFTPClient {
 			errorPacket[j + 4] = byteString[j];
 		}
 		errorPacket[errorPacket.length - 1] = 0;
-		System.out.println("Sending ERROR " + errorCode);
+		System.out.println("Sending Error " + errorCode +": "+ msg ); 
+		System.out.println("Sending Error to:" + port); 
 		try {
 			sendReceiveSocket.send(new DatagramPacket(errorPacket, errorPacket.length, dest, port));
 		} catch (IOException e) {

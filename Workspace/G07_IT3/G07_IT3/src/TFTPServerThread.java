@@ -71,13 +71,13 @@ public class TFTPServerThread extends Thread {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), receivePacket.getPort());
+			sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(), transactionPort);
 
 		} else if (req == "write") { // for Write it's 0400
 			// response = writeResp;
 			response = createWriteResponse(block);
 			sendPacket = new DatagramPacket(response, response.length, receivePacket.getAddress(),
-					receivePacket.getPort());
+					transactionPort);
 		} else { // it was invalid, close socket on port 69 (so things work properly next time)
 					// and quit
 			sendReceiveSocket.close();
@@ -91,15 +91,15 @@ public class TFTPServerThread extends Thread {
 		// Construct a datagram packet that is to be sent to a specified port
 		// on a specified host.
 
-		System.out.println("Server: Sending packet:");
+		System.out.print("Server: Sending ");
+		if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		else if(data[1] == 4) System.out.println("ACK "+ (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
+		
 		System.out.println("To host: " + sendPacket.getAddress());
 		System.out.println("Destination host port: " + sendPacket.getPort());
 		len = sendPacket.getLength();
 		System.out.println("Length: " + len);
-		// System.out.println("Containing: ");
-		// for (j=0;j<len;j++) {
-		// System.out.println("byte " + j + " " + response[j]);
-		// }
+
 
 		// Send the datagram packet to the client via a new socket.
 
@@ -131,7 +131,7 @@ public class TFTPServerThread extends Thread {
 			}
 		}
 
-		System.out.println("Begin Sending and Receiving Data");
+		System.out.println("Begin Sending and Receiving Data\n");
 
 		int expectedBlockNum = 1;
 
@@ -174,14 +174,17 @@ public class TFTPServerThread extends Thread {
 				if (i > 3) {
 					System.out.println("Timeout: Shutting Down");
 					System.exit(0);
-				} else {
-					int sourcePort = receivePacket.getPort();
-					if (transactionPort != sourcePort) {
-						// ERROR CODE 5
-						sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
-					}
+				}
+				else {
 					break;
 				}
+			}
+			
+			int sourcePort = receivePacket.getPort();
+			if (transactionPort != sourcePort) {
+				// ERROR CODE 5
+				sendErrorPacket(5, "Incorrect TID (Wrong port)", sourcePort, receivePacket.getAddress());
+				continue;
 			}
 
 			if (req == "read") { // If sending data
@@ -192,7 +195,6 @@ public class TFTPServerThread extends Thread {
 					System.exit(1);
 				}
 			}
-			
 			
 			System.out.print("ServerThread: received ");
 			if(data[1] == 3) System.out.println("DATA " + (Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3])) );
@@ -206,26 +208,26 @@ public class TFTPServerThread extends Thread {
 			// Validate received packet
 			
 			// Test Opcode
-			if (!(data[0] == 0 && ((data[1] == 1) || (data[1] == 2) || (data[1] == 3) || (data[1] == 4) || (data[1] == 5))))
-				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
+			if (!(data[0] == 0 && ((data[1] == 3) || (data[1] == 4) || (data[1] == 5))))
+				sendErrorPacket(4, "Received Opcode is Invalid", transactionPort, receivePacket.getAddress());
 
 			// Test Error Messages
 			if (data[1] == 5) {
 
 				// Examine Formatting
 				if ((data.length < 5) || (data[data.length - 1] != 0))
-					sendErrorPacket(4, "Received Error Message has Invalid Formatting", receivePacket.getPort(),
+					sendErrorPacket(4, "Received Error Message has Invalid Formatting", transactionPort,
 							receivePacket.getAddress());
 
 				// Expand in Iteration 4
-				if (!(data[2] == 2 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
-					sendErrorPacket(4, "Received ErrorCode is Invalid", receivePacket.getPort(),
+				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+					sendErrorPacket(4, "Received ErrorCode is Invalid", transactionPort,
 							receivePacket.getAddress());
 
 			} else {
 				// Test Data or Ack
 				if (data.length < 4)
-					sendErrorPacket(4, "Received Message has Invalid Formatting", receivePacket.getPort(),
+					sendErrorPacket(4, "Received Message has Invalid Formatting", transactionPort,
 							receivePacket.getAddress());
 
 			}
@@ -255,11 +257,11 @@ public class TFTPServerThread extends Thread {
 				byte[] bytes = { 0, 4, (byte) (blockNumber / 256), (byte) (blockNumber % 256) };
 
 				sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
-						receivePacket.getPort());
+						transactionPort);
 
 				System.out.println("ServerThread: sending ACK " + blockNumber );
 				System.out.println("To host: " + sendPacket.getAddress());
-				System.out.println("Destination host port: " + sendPacket.getPort());
+				System.out.println("Destination host port: " + transactionPort);
 				System.out.println("Length: " + sendPacket.getLength() + "\n");
 				
 				try {
@@ -272,7 +274,7 @@ public class TFTPServerThread extends Thread {
 					// Closes the stream, file is complete
 					try {
 						output.close();
-						System.out.println("output closed");
+						System.out.println("Transfer Complete\n");
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -305,7 +307,7 @@ public class TFTPServerThread extends Thread {
 					}
 					expectedBlockNum = (expectedBlockNum + 1) % 65536;
 					sendPacket = new DatagramPacket(bytes, bytes.length, receivePacket.getAddress(),
-							receivePacket.getPort());
+							transactionPort);
 
 					System.out.println("ServerThread: sending DATA " + blockNumber );
 					System.out.println("To host: " + sendPacket.getAddress());
@@ -334,6 +336,9 @@ public class TFTPServerThread extends Thread {
 							"\nDuplicate/Out-of-order ACK packet\n" + blockNumber + " " + expectedBlockNum + "\n");
 				}
 
+			} else if (data[1] == 5) {
+				System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + " Shutting Down" ); 
+				System.exit(0);
 			}
 
 		}
@@ -367,6 +372,7 @@ public class TFTPServerThread extends Thread {
 		for (int j = 0; j < byteString.length; j++) {
 			errorPacket[j+4] = byteString[j];
 		}
+		System.out.println("Sending Error " + errorCode +": "+ msg ); 
 		errorPacket[errorPacket.length - 1] = 0;
 		try {
 			sendReceiveSocket.send(new DatagramPacket(errorPacket, errorPacket.length, dest, port));

@@ -42,7 +42,7 @@ public class TFTPServer {
 
 		byte[] data;
 		int len, j = 0, k = 0;
-		String req; // request type
+		String req = "error"; // request type
 		String filename = "", mode;
 		ServerShutdownThread shutThread = new ServerShutdownThread(this);
 		shutThread.start();
@@ -63,7 +63,10 @@ public class TFTPServer {
 			}
 
 			// Process the received datagram.
-			System.out.println("Server: Packet received:");
+			System.out.print("Server: ");
+			if(data[1] == 1) System.out.println("RRQ received");
+			else if(data[1] == 2) System.out.println("WRQ received");
+			
 			System.out.println("From host: " + receivePacket.getAddress());
 			System.out.println("Host port: " + receivePacket.getPort());
 			len = receivePacket.getLength();
@@ -77,49 +80,51 @@ public class TFTPServer {
 
 			// Form a String from the byte array.
 			String received = new String(data, 0, len);
-			System.out.println(received);
 
 			if (data[0] != 0)
-				req = "error"; // bad
+				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
 			else if (data[1] == 1)
 				req = "read"; // could be read
 			else if (data[1] == 2)
 				req = "write"; // could be write
 			else
-				req = "error"; // bad
+				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
 
-			if (req != "error") { // check for filename
+				// check for filename
 				// search for next all 0 byte
 
 				for (j = 2; j < len; j++) {
 					if (data[j] == 0)
 						break;
 				}
+				if (j == len - 1) {
+					sendErrorPacket(4, "Received Packet has no middle separator", receivePacket.getPort(), receivePacket.getAddress());
+				}
 				if (j == len)
-					req = "error"; // didn't find a 0 byte
+					sendErrorPacket(4, "Received Packet has no separator", receivePacket.getPort(), receivePacket.getAddress()); // didn't find a 0 byte
 				if (j == 2)
-					req = "error"; // filename is 0 bytes long
+					sendErrorPacket(4, "Received Packet has no filename", receivePacket.getPort(), receivePacket.getAddress()); // filename is 0 bytes long
 				// otherwise, extract filename
 				filename = new String(data, 2, j - 2);
-				System.out.println("Filename: " + filename);
-			}
 
-			if (req != "error") { // check for mode
+				// check for mode
 				// search for next all 0 byte
 				for (k = j + 1; k < len; k++) {
 					if (data[k] == 0)
 						break;
 				}
 				if (k == len)
-					req = "error"; // didn't find a 0 byte
+					sendErrorPacket(4, "Received Packet has no ending separator", receivePacket.getPort(), receivePacket.getAddress()); // didn't find a 0 byte
 				if (k == j + 1)
-					req = "error"; // mode is 0 bytes long
+					sendErrorPacket(4, "Received Packet has no mode", receivePacket.getPort(), receivePacket.getAddress()); // mode is 0 bytes long
 				mode = new String(data, j, k - j - 1);
-			}
+				if (! ( (mode != "octet") || (mode != "netascii") )) sendErrorPacket(4, "Received Packet has incorrect mode", receivePacket.getPort(), receivePacket.getAddress());
+
 
 			if (k != len - 1)
-				req = "error"; // other stuff at end of packet
-
+				sendErrorPacket(4, "Received Packet has excess data", receivePacket.getPort(), receivePacket.getAddress()); // other stuff at end of packet
+			
+			
 			// If a tread working on the filename isn't in the thread group start a separate
 			// thread to handle it
 			boolean fileIsFree = true;
@@ -127,13 +132,11 @@ public class TFTPServer {
 			Thread[] threadArray = new Thread[Threads.activeCount()];
 			Threads.enumerate(threadArray);
 			for (Thread thread : threadArray) {
-				System.out.println("thread name: " + thread.getName() + "filename: " + filename);
 				if (thread.getName().equals(filename))
 					fileIsFree = false;
 			}
 
 			if (fileIsFree) {
-				System.out.println("file free");
 				TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Threads, filename);
 				t.start();
 			}
@@ -172,6 +175,7 @@ public class TFTPServer {
 			errorPacket[j + 4] = byteString[j];
 		}
 		errorPacket[errorPacket.length - 1] = 0;
+		System.out.println("Sending Error " + errorCode +": "+ msg ); 
 		try {
 			receiveSocket.send(new DatagramPacket(errorPacket, errorPacket.length, dest, port));
 		} catch (IOException e) {
