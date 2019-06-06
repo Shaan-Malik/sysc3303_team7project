@@ -19,6 +19,7 @@ public class TFTPServer {
 	private DatagramPacket receivePacket;
 	private DatagramSocket receiveSocket;
 	private ThreadGroup Threads;
+	private String serverDirectory = "M:/TFTPServer";
 
 	public TFTPServer() {
 		try {
@@ -107,6 +108,16 @@ public class TFTPServer {
 				// otherwise, extract filename
 				filename = new String(data, 2, j - 2);
 
+				//If file doesn't exist, send error code 1 to client
+				if(req == "read" && !( new File(serverDirectory+"/"+filename) ).exists() ) {
+					sendErrorPacket(1, "File doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
+				}
+				
+				//If file already exists, send error 6 to client
+				if(req == "write" && ( new File(serverDirectory+"/"+filename) ).exists() ) {
+					sendErrorPacket(6, "File already exists", receivePacket.getPort(), receivePacket.getAddress());
+				}
+				
 				// check for mode
 				// search for next all 0 byte
 				for (k = j + 1; k < len; k++) {
@@ -137,7 +148,7 @@ public class TFTPServer {
 			}
 
 			if (fileIsFree) {
-				TFTPServerThread t = new TFTPServerThread(data, receivePacket, req, len, Threads, filename);
+				TFTPServerThread t = new TFTPServerThread(serverDirectory, data, receivePacket, req, len, Threads, filename);
 				t.start();
 			}
 

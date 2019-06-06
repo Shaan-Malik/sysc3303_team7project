@@ -23,11 +23,12 @@ public class TFTPServerThread extends Thread {
 	int block; // the number of blocks that have been read.
 	int transactionPort;
 	FileInputStream input;
-	String serverDirectory = "TFTPServer";
+	String serverDirectory;
 
-	TFTPServerThread(byte[] _data, DatagramPacket _receivePacket, String _req, int _len, ThreadGroup _threadGroup,
+	TFTPServerThread(String _serverDirectory, byte[] _data, DatagramPacket _receivePacket, String _req, int _len, ThreadGroup _threadGroup,
 			String _filename) {
 		super(_threadGroup, _filename);
+		serverDirectory = _serverDirectory;
 		receivePacket = _receivePacket;
 		data = _data;
 		req = _req;
@@ -47,7 +48,7 @@ public class TFTPServerThread extends Thread {
 		// If it's a read, send back DATA (03) block 1
 		// If it's a write, send back ACK (04) block 0
 
-		File destinationFile = new File("M:/" + serverDirectory + "/" + filename);
+		File destinationFile = new File(serverDirectory + "/" + filename);
 		if (req == "read") {
 			try {
 
@@ -220,7 +221,7 @@ public class TFTPServerThread extends Thread {
 							receivePacket.getAddress());
 
 				// Expand in Iteration 4
-				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 1) && (Byte.toUnsignedInt(data[3]) <= 6))))
 					sendErrorPacket(4, "Received ErrorCode is Invalid", transactionPort,
 							receivePacket.getAddress());
 
@@ -240,6 +241,21 @@ public class TFTPServerThread extends Thread {
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// WRITE
+				
+				//If packet is too large for remaining space, terminate transfer and send Error 3
+				if(( (new File(serverDirectory)).getUsableSpace()) < (data.length-4) ) {
+					
+					try {
+						output.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+						System.exit(1);
+					}
+					
+					destinationFile.delete();
+					sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
+					
+				}
 
 				if (blockNumber == expectedBlockNum) {
 					try {
@@ -337,6 +353,10 @@ public class TFTPServerThread extends Thread {
 				}
 
 			} else if (data[1] == 5) {
+				
+				//Delete partially constructed file if in progress
+				if(req == "write" && destinationFile.exists()) destinationFile.delete();
+				
 				System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + " Shutting Down" ); 
 				System.exit(0);
 			}

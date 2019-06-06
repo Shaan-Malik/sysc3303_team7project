@@ -39,6 +39,20 @@ public class TFTPClient {
 	public void sendAndReceive(int type, String filename, String dataType, String outputMode, int testMode,
 			String directory) {
 
+		File destinationFile = new File(directory + "/" + filename);
+
+		//If file doesn't exist on write, alert user and exit
+		if( (type == 2) && (! destinationFile.exists() ) ) {
+			System.out.println("File at "+destinationFile+" doesn't exist");
+			return;
+		}
+		
+		//If file already exists on read, alert user and exit
+		if( (type == 1) && ( destinationFile.exists() ) ) {
+			System.out.println("File at "+destinationFile+" already exist");
+			return;
+		}
+		
 		try {
 			// Construct a datagram socket and bind it to any available
 			// port on the local host machine. This socket will be used to
@@ -208,8 +222,7 @@ public class TFTPClient {
 		}
 
 		// Initialize file I/O structures
-		File destinationFile = new File(directory + "/" + filename);
-
+		
 		if (type == 2) {
 			try {
 				input = new FileInputStream(destinationFile);
@@ -252,7 +265,7 @@ public class TFTPClient {
 							receivePacket.getAddress());
 
 				// Expand in Iteration 4
-				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 4) || (Byte.toUnsignedInt(data[3]) <= 5))))
+				if (!(data[2] == 0 && ((Byte.toUnsignedInt(data[3]) >= 1) && (Byte.toUnsignedInt(data[3]) <= 6))))
 					sendErrorPacket(4, "Received ErrorCode is Invalid", receivePacket.getPort(),
 							receivePacket.getAddress());
 
@@ -292,6 +305,22 @@ public class TFTPClient {
 				int blockNumber = Byte.toUnsignedInt(data[2]) * 256 + Byte.toUnsignedInt(data[3]);
 
 				if (blockNumber == expectedBlockNum) {
+					
+					//If packet is too large for remaining space, terminate transfer and send Error 3
+					if(((new File(directory).getUsableSpace())) < (data.length-4) ) {
+						
+						try {
+							output.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+							System.exit(1);
+						}
+						
+						destinationFile.delete();
+						sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
+						
+					}
+					
 					// Output data to file
 					try {
 						output.write(data, 4, data.length - 4);
@@ -405,6 +434,10 @@ public class TFTPClient {
 				}
 			} else if (data[1] == 5) {
 				// PRINT AND SHUTDOWN
+				
+				//Delete partially constructed file if in progress
+				if(type == 1 && destinationFile.exists()) destinationFile.delete();
+				
 				if (data[3] == 5) {
 					if (outputMode.equals("verbose")) System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1))));
 				}
