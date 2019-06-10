@@ -41,17 +41,27 @@ public class TFTPClient {
 
 		File destinationFile = new File(directory + "/" + filename);
 
+		
+		
 		//If file doesn't exist on write, alert user and exit
 		if( (type == 2) && (! destinationFile.exists() ) ) {
 			System.out.println("File at "+destinationFile+" doesn't exist");
 			return;
 		}
 		
-		//If file already exists on read, alert user and exit
-		if( (type == 1) && ( destinationFile.exists() ) ) {
-			System.out.println("File at "+destinationFile+" already exist");
+		//If file can't be read from on write, alert user and exit
+		if( (type == 2) && (! destinationFile.canRead()) ) {
+			System.out.println("File at "+destinationFile+" can't be read from");
 			return;
 		}
+		
+		//If file already exists on read, alert user and exit
+		if( (type == 1) && ( destinationFile.exists() ) ) {
+			System.out.println("File at "+destinationFile+" already exists");
+			return;
+		}
+		
+		
 		
 		try {
 			// Construct a datagram socket and bind it to any available
@@ -146,11 +156,6 @@ public class TFTPClient {
 		FileInputStream input = null;
 		FileOutputStream output = null;
 
-		// Form a String from the byte array, and print the string.
-		String sending = new String(msg, 0, len);
-		if (outputMode.equals("verbose"))
-			System.out.println(sending);
-
 		// Send the datagram packet to the server via the send/receive socket.
 		try {
 			sendReceiveSocket.send(sendPacket);
@@ -230,7 +235,8 @@ public class TFTPClient {
 				System.out.println("File at "+destinationFile+" doesn't exist");
 				return;
 			} catch (SecurityException e1) {
-				//Add Error 2 Here
+				System.out.println("File at "+destinationFile+" can't be read from");
+				return;
 			}
 		} else if (type == 1) {
 
@@ -444,13 +450,20 @@ public class TFTPClient {
 				// PRINT AND SHUTDOWN
 				
 				//Delete partially constructed file if in progress
-				if(type == 1 && destinationFile.exists()) destinationFile.delete();
+				if(type == 1 && destinationFile.exists()) {
+					try {
+						output.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					destinationFile.delete();
+				}
 				
 				if (data[3] == 5) {
 					if (outputMode.equals("verbose")) System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1))));
 				}
 				else {
-					if (outputMode.equals("verbose")) System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + " Shutting Down" ); 
+					if (outputMode.equals("verbose")) System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + "\n Shutting Down" ); 
 					System.exit(0);
 				}
 			}

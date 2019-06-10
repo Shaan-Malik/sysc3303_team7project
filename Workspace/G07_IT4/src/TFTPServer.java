@@ -79,9 +79,6 @@ public class TFTPServer {
 			// System.out.println("byte " + j + " " + data[j]);
 			// }
 
-			// Form a String from the byte array.
-			String received = new String(data, 0, len);
-
 			if (data[0] != 0)
 				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
 			else if (data[1] == 1)
@@ -193,6 +190,7 @@ public class TFTPServer {
 			e.printStackTrace();
 		}
 		if (errorCode != 5) {
+			System.out.println("Shutting down server");
 			System.exit(0);
 		}
 	}

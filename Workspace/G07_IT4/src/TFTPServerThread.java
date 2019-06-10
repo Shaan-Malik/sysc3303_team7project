@@ -55,7 +55,7 @@ public class TFTPServerThread extends Thread {
 			} catch (FileNotFoundException e1) {
 				sendErrorPacket(1, "File "+serverDirectory+"/"+filename+" doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
 			} catch (SecurityException e1) {
-				//Add Error 2 Here
+				sendErrorPacket(2, "File "+serverDirectory+"/"+filename+" can't be read from", receivePacket.getPort(), receivePacket.getAddress());
 			}
 		}
 
@@ -134,7 +134,7 @@ public class TFTPServerThread extends Thread {
 			} catch (FileNotFoundException e1) {
 				sendErrorPacket(6, "File "+serverDirectory+"/"+filename+" already exists", receivePacket.getPort(), receivePacket.getAddress());
 			} catch (SecurityException e1) {
-				//Add Error 2 Here
+				sendErrorPacket(2, "File "+serverDirectory+"/"+filename+" can't be written to", receivePacket.getPort(), receivePacket.getAddress());
 			}
 		}
 
@@ -361,7 +361,7 @@ public class TFTPServerThread extends Thread {
 				//Delete partially constructed file if in progress
 				if(req == "write" && destinationFile.exists()) destinationFile.delete();
 				
-				System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + " Shutting Down" ); 
+				System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + "\n Shutting Down" ); 
 				System.exit(0);
 			}
 
@@ -404,6 +404,7 @@ public class TFTPServerThread extends Thread {
 			e.printStackTrace();
 		}
 		if (errorCode != 5) {
+			System.out.println("Shutting down thread");
 			System.exit(0);
 		}
 	}
