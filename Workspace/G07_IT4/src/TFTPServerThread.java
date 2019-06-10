@@ -51,10 +51,11 @@ public class TFTPServerThread extends Thread {
 		File destinationFile = new File(serverDirectory + "/" + filename);
 		if (req == "read") {
 			try {
-
 				input = new FileInputStream(destinationFile);
 			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
+				sendErrorPacket(1, "File "+serverDirectory+"/"+filename+" doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
+			} catch (SecurityException e1) {
+				//Add Error 2 Here
 			}
 		}
 
@@ -126,9 +127,14 @@ public class TFTPServerThread extends Thread {
 		FileOutputStream output = null;
 		if (req.equals("write")) {
 			try {
+				//If file already exists, throw error
+				if( ( new File(serverDirectory+"/"+filename) ).exists() ) throw new FileNotFoundException();
+				
 				output = new FileOutputStream(destinationFile);
 			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
+				sendErrorPacket(6, "File "+serverDirectory+"/"+filename+" already exists", receivePacket.getPort(), receivePacket.getAddress());
+			} catch (SecurityException e1) {
+				//Add Error 2 Here
 			}
 		}
 
@@ -241,27 +247,25 @@ public class TFTPServerThread extends Thread {
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// WRITE
-				
-				//If packet is too large for remaining space, terminate transfer and send Error 3
-				if(( (new File(serverDirectory)).getUsableSpace()) < (data.length-4) ) {
-					
-					try {
-						output.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-						System.exit(1);
-					}
-					
-					destinationFile.delete();
-					sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
-					
-				}
 
 				if (blockNumber == expectedBlockNum) {
 					try {
 						output.write(data, 4, data.length - 4);
 					} catch (IOException e) {
-						e.printStackTrace();
+						//If packet is too large for remaining space, terminate transfer and send Error 3
+						if(((new File(serverDirectory).getUsableSpace())) < (data.length-4) ) {
+							
+							try {
+								output.close();
+							} catch (IOException e1) {
+								e1.printStackTrace();
+								System.exit(1);
+							}
+							
+							destinationFile.delete();
+							sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
+							
+						} else System.exit(1);
 					}
 					expectedBlockNum = (expectedBlockNum + 1) % 65536;
 				} else {

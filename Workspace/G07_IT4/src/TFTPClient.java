@@ -227,15 +227,25 @@ public class TFTPClient {
 			try {
 				input = new FileInputStream(destinationFile);
 			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
+				System.out.println("File at "+destinationFile+" doesn't exist");
+				return;
+			} catch (SecurityException e1) {
+				//Add Error 2 Here
 			}
 		} else if (type == 1) {
 
 			try {
+				//If file already exists, throw error
+				if( ( destinationFile ).exists() ) throw new FileNotFoundException();
+				
 				output = new FileOutputStream(destinationFile);
 			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
+				System.out.println("File at "+destinationFile+" already exists");
+				return;
+			} catch (SecurityException e1) {
+				//Add Error 2 Here
 			}
+			
 		}
 
 		if (outputMode.equals("verbose"))
@@ -306,26 +316,24 @@ public class TFTPClient {
 
 				if (blockNumber == expectedBlockNum) {
 					
-					//If packet is too large for remaining space, terminate transfer and send Error 3
-					if(((new File(directory).getUsableSpace())) < (data.length-4) ) {
-						
-						try {
-							output.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-							System.exit(1);
-						}
-						
-						destinationFile.delete();
-						sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
-						
-					}
-					
 					// Output data to file
 					try {
 						output.write(data, 4, data.length - 4);
 					} catch (IOException e) {
-						e.printStackTrace();
+						//If packet is too large for remaining space, terminate transfer and send Error 3
+						if(((new File(directory).getUsableSpace())) < (data.length-4) ) {
+							
+							try {
+								output.close();
+							} catch (IOException e1) {
+								e1.printStackTrace();
+								System.exit(1);
+							}
+							
+							destinationFile.delete();
+							sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
+							
+						} else System.exit(1);
 					}
 					expectedBlockNum = (expectedBlockNum + 1) % 65536;
 				} else {

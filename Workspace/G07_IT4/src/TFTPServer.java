@@ -110,12 +110,12 @@ public class TFTPServer {
 
 				//If file doesn't exist, send error code 1 to client
 				if(req == "read" && !( new File(serverDirectory+"/"+filename) ).exists() ) {
-					sendErrorPacket(1, "File doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
+					sendErrorPacket(1, "File "+serverDirectory+"/"+filename+" doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
 				}
 				
 				//If file already exists, send error 6 to client
 				if(req == "write" && ( new File(serverDirectory+"/"+filename) ).exists() ) {
-					sendErrorPacket(6, "File already exists", receivePacket.getPort(), receivePacket.getAddress());
+					sendErrorPacket(6, "File "+serverDirectory+"/"+filename+" already exists", receivePacket.getPort(), receivePacket.getAddress());
 				}
 				
 				// check for mode
