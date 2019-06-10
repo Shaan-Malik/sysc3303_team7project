@@ -38,7 +38,7 @@ public class TFTPServer {
 	 * 
 	 * @throws Exception on invalid requests
 	 */
-	public void receiveAndSendTFTP(String fileDirectory) throws Exception {
+	public void receiveAndSendTFTP(String serverDirectory) throws Exception {
 
 		byte[] data;
 		int len, j = 0, k = 0;
@@ -78,9 +78,6 @@ public class TFTPServer {
 			// System.out.println("byte " + j + " " + data[j]);
 			// }
 
-			// Form a String from the byte array.
-			String received = new String(data, 0, len);
-
 			if (data[0] != 0)
 				sendErrorPacket(4, "Received Opcode is Invalid", receivePacket.getPort(), receivePacket.getAddress());
 			else if (data[1] == 1)
@@ -106,6 +103,16 @@ public class TFTPServer {
 					sendErrorPacket(4, "Received Packet has no filename", receivePacket.getPort(), receivePacket.getAddress()); // filename is 0 bytes long
 				// otherwise, extract filename
 				filename = new String(data, 2, j - 2);
+
+				//If file doesn't exist, send error code 1 to client
+				if(req == "read" && !( new File(serverDirectory+"/"+filename) ).exists() ) {
+					sendErrorPacket(1, "File "+serverDirectory+"/"+filename+" doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
+				}
+				
+				//If file already exists, send error 6 to client
+				if(req == "write" && ( new File(serverDirectory+"/"+filename) ).exists() ) {
+					sendErrorPacket(6, "File "+serverDirectory+"/"+filename+" already exists", receivePacket.getPort(), receivePacket.getAddress());
+				}
 
 				// check for mode
 				// search for next all 0 byte
@@ -137,7 +144,7 @@ public class TFTPServer {
 			}
 
 			if (fileIsFree) {
-				TFTPServerThread t = new TFTPServerThread(fileDirectory, data, receivePacket, req, len, Threads, filename);
+				TFTPServerThread t = new TFTPServerThread(serverDirectory, data, receivePacket, req, len, Threads, filename);
 				t.start();
 			}
 
@@ -219,6 +226,7 @@ public class TFTPServer {
 			e.printStackTrace();
 		}
 		if (errorCode != 5) {
+			System.out.println("Shutting down server");
 			System.exit(0);
 		}
 	}

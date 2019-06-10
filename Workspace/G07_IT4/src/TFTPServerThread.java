@@ -51,10 +51,11 @@ public class TFTPServerThread extends Thread {
 		File destinationFile = new File(serverDirectory + "/" + filename);
 		if (req == "read") {
 			try {
-
 				input = new FileInputStream(destinationFile);
 			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
+				sendErrorPacket(1, "File "+serverDirectory+"/"+filename+" doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
+			} catch (SecurityException e1) {
+				sendErrorPacket(2, "File "+serverDirectory+"/"+filename+" can't be read from", receivePacket.getPort(), receivePacket.getAddress());
 			}
 		}
 
@@ -126,9 +127,14 @@ public class TFTPServerThread extends Thread {
 		FileOutputStream output = null;
 		if (req.equals("write")) {
 			try {
+				//If file already exists, throw error
+				if( ( new File(serverDirectory+"/"+filename) ).exists() ) throw new FileNotFoundException();
+				
 				output = new FileOutputStream(destinationFile);
 			} catch (FileNotFoundException e1) {
-				e1.printStackTrace();
+				sendErrorPacket(6, "File "+serverDirectory+"/"+filename+" already exists", receivePacket.getPort(), receivePacket.getAddress());
+			} catch (SecurityException e1) {
+				sendErrorPacket(2, "File "+serverDirectory+"/"+filename+" can't be written to", receivePacket.getPort(), receivePacket.getAddress());
 			}
 		}
 
@@ -241,27 +247,25 @@ public class TFTPServerThread extends Thread {
 			if (data[1] == 3) {
 				// Parsing DATA packet
 				// WRITE
-				
-				//If packet is too large for remaining space, terminate transfer and send Error 3
-				if(( (new File(serverDirectory)).getUsableSpace()) < (data.length-4) ) {
-					
-					try {
-						output.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-						System.exit(1);
-					}
-					
-					destinationFile.delete();
-					sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
-					
-				}
 
 				if (blockNumber == expectedBlockNum) {
 					try {
 						output.write(data, 4, data.length - 4);
 					} catch (IOException e) {
-						e.printStackTrace();
+						//If packet is too large for remaining space, terminate transfer and send Error 3
+						if(((new File(serverDirectory).getUsableSpace())) < (data.length-4) ) {
+							
+							try {
+								output.close();
+							} catch (IOException e1) {
+								e1.printStackTrace();
+								System.exit(1);
+							}
+							
+							destinationFile.delete();
+							sendErrorPacket(3, "Insufficient space on disk", receivePacket.getPort(), receivePacket.getAddress());
+							
+						} else System.exit(1);
 					}
 					expectedBlockNum = (expectedBlockNum + 1) % 65536;
 				} else {
@@ -357,7 +361,7 @@ public class TFTPServerThread extends Thread {
 				//Delete partially constructed file if in progress
 				if(req == "write" && destinationFile.exists()) destinationFile.delete();
 				
-				System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + " Shutting Down" ); 
+				System.out.println("Received Error " + Byte.toUnsignedInt(data[3])+": "+ ( new String(Arrays.copyOfRange(data, 4, data.length-1)) ) + "\n Shutting Down" ); 
 				System.exit(0);
 			}
 
@@ -400,6 +404,7 @@ public class TFTPServerThread extends Thread {
 			e.printStackTrace();
 		}
 		if (errorCode != 5) {
+			System.out.println("Shutting down thread");
 			System.exit(0);
 		}
 	}
