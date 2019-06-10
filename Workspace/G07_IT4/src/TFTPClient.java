@@ -249,7 +249,8 @@ public class TFTPClient {
 				System.out.println("File at "+destinationFile+" already exists");
 				return;
 			} catch (SecurityException e1) {
-				//Add Error 2 Here
+				System.out.println("File at "+destinationFile+" can't be written to");
+				return;
 			}
 			
 		}
