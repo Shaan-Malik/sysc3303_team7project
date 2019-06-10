@@ -18,7 +18,7 @@ public class TFTPServerThread extends Thread {
 	byte[] data, response = new byte[4];
 	String req; // READ, WRITE or ERROR
 	int len;
-	String filename, mode;
+	String filename, mode, fileDirectory;
 	int j, k;
 	int block; // the number of blocks that have been read.
 	int transactionPort;

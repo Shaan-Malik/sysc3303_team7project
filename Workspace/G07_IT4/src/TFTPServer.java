@@ -19,7 +19,6 @@ public class TFTPServer {
 	private DatagramPacket receivePacket;
 	private DatagramSocket receiveSocket;
 	private ThreadGroup Threads;
-	private String serverDirectory = "M:/TFTPServer";
 
 	public TFTPServer() {
 		try {
@@ -39,7 +38,7 @@ public class TFTPServer {
 	 * 
 	 * @throws Exception on invalid requests
 	 */
-	public void receiveAndSendTFTP() throws Exception {
+	public void receiveAndSendTFTP(String fileDirectory) throws Exception {
 
 		byte[] data;
 		int len, j = 0, k = 0;
@@ -108,16 +107,6 @@ public class TFTPServer {
 				// otherwise, extract filename
 				filename = new String(data, 2, j - 2);
 
-				//If file doesn't exist, send error code 1 to client
-				if(req == "read" && !( new File(serverDirectory+"/"+filename) ).exists() ) {
-					sendErrorPacket(1, "File doesn't exist", receivePacket.getPort(), receivePacket.getAddress());
-				}
-				
-				//If file already exists, send error 6 to client
-				if(req == "write" && ( new File(serverDirectory+"/"+filename) ).exists() ) {
-					sendErrorPacket(6, "File already exists", receivePacket.getPort(), receivePacket.getAddress());
-				}
-				
 				// check for mode
 				// search for next all 0 byte
 				for (k = j + 1; k < len; k++) {
@@ -148,12 +137,49 @@ public class TFTPServer {
 			}
 
 			if (fileIsFree) {
-				TFTPServerThread t = new TFTPServerThread(serverDirectory, data, receivePacket, req, len, Threads, filename);
+				TFTPServerThread t = new TFTPServerThread(fileDirectory, data, receivePacket, req, len, Threads, filename);
 				t.start();
 			}
 
 		}
 	}
+	
+	public void initialise() {
+		Scanner scan = new Scanner(System.in);
+		if (Threads != null)  {
+			Thread[] threadArray = new Thread[Threads.activeCount()];
+			Threads.enumerate(threadArray);
+			for (Thread thread : threadArray) {
+				try {
+					thread.join();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		System.out.println("TFTP Server Iteration 4:\n");
+		System.out.println("Enter the file directory:");
+		String fileDirectory = scan.next();
+		System.out.println("File Directory Saved\n");
+		while (true) {
+			System.out.println("Type done if finished, or type file to change the file directory");
+			String command = scan.next();
+			if (command.equals("done")) {
+				try {
+					receiveAndSendTFTP(fileDirectory);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				break;
+			}
+			else if (command.equals("file")) {
+				System.out.println("Enter the file directory:");
+				fileDirectory = scan.next();
+				System.out.println("File Directory Saved\n");
+			}
+		}
+	}
+	
 
 	/**
 	 * Shuts down the currently active server after all threads have stopped
@@ -172,7 +198,7 @@ public class TFTPServer {
 
 	public static void main(String args[]) throws Exception {
 		TFTPServer s = new TFTPServer();
-		s.receiveAndSendTFTP();
+		s.initialise();
 	}
 
 	void sendErrorPacket(int errorCode, String msg, int port, InetAddress dest) {
@@ -211,12 +237,20 @@ class ServerShutdownThread extends Thread {
 	 * On user typing in "shutdown" this shuts the server down
 	 */
 	public void run() {
-		String s = scan.nextLine();
-		if (s.equals("s")) {
-			try {
-				parent.shutdown();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+		while (true) {
+			String s = scan.nextLine();
+			if (s.equals("r")) {
+				parent.initialise();
+				break;
+			}
+			if (s.equals("s")) {
+				try {
+					scan.close();
+					parent.shutdown();
+					break;
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
 		}
 	}

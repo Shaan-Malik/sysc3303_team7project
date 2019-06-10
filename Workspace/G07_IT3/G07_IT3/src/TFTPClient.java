@@ -485,7 +485,7 @@ public class TFTPClient {
 		Scanner scan = new Scanner(System.in);
 		int type, testModeInt;
 		String filename, datatype, outputMode, directory;
-		System.out.println("TFTP Client: Interation 3\n");
+		System.out.println("TFTP Client: Interation 4\n");
 		datatype = "octet";
 		while (true) {
 			System.out.print("Enter read or write request: \n");
