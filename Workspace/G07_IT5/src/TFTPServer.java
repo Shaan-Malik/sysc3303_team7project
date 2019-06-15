@@ -164,7 +164,7 @@ public class TFTPServer {
 				}
 			}
 		}
-		System.out.println("TFTP Server Iteration 4:\n");
+		System.out.println("TFTP Server Iteration 5:\n");
 		System.out.println("Enter the file directory:");
 		String fileDirectory = scan.next();
 		System.out.println("File Directory Saved\n");

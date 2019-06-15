@@ -536,7 +536,7 @@ public class TFTPClient {
 		int type, testModeInt;
 		String filename, datatype, outputMode, directory;
 		InetAddress serverAddress = null;
-		System.out.println("TFTP Client: Interation 3\n");
+		System.out.println("TFTP Client: Interation 5\n");
 		datatype = "octet";		
 		while (true) {
 			System.out.print("Enter read or write request: \n");

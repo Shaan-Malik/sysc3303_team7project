@@ -91,7 +91,7 @@ public class TFTPSim {
 		String byteNumber = null;
 		String packetType;
 		boolean scanning;
-		System.out.println("\nError Simulator Iteration 4\n");
+		System.out.println("\nError Simulator Iteration 5\n");
 		while (true) {
 			scanning = true;
 			type = 0;
