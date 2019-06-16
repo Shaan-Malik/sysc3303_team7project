@@ -127,7 +127,7 @@ public class TFTPSim {
 				if (type != 1 && type != 2 && type != 3) {
 					continue;
 				}
-				System.out.print("Enter the packet you want to simulate an error for: RRQ, WRQ, ACK, DATA \n");
+				System.out.print("Enter the packet you want to simulate an error for: RRQ, WRQ, ACK, DATA, ERROR \n");
 				packetType = scan.nextLine();
 				if (packetType.toLowerCase().equals("ack") || packetType.toLowerCase().equals("data")) {
 					scanning = true;
@@ -161,6 +161,8 @@ public class TFTPSim {
 				}
 				if (packetType.toLowerCase().equals("rrq")) {
 					byteNumber = "01";
+				} else if (packetType.toLowerCase().equals("error")) {
+					byteNumber = "05";
 				} else if (packetType.toLowerCase().equals("wrq")) {
 					byteNumber = "02";
 				} else if (packetType.toLowerCase().equals("ack")) {
@@ -207,7 +209,7 @@ public class TFTPSim {
 					continue;
 				} else if (type == 1) {
 					int opCode = 0;
-					System.out.print("Enter the packet you want to change the opcode for: RRQ, WRQ, ACK, DATA \n");
+					System.out.print("Enter the packet you want to change the opcode for: RRQ, WRQ, ACK, DATA, ERROR \n");
 					packetType = scan.nextLine();
 					if (packetType.toLowerCase().equals("ack") || packetType.toLowerCase().equals("data")) {
 						scanning = true;
@@ -237,6 +239,8 @@ public class TFTPSim {
 						byteNumber = "01";
 					} else if (packetType.toLowerCase().equals("wrq")) {
 						byteNumber = "02";
+					} else if (packetType.toLowerCase().equals("error")) {
+						byteNumber = "05";
 					} else if (packetType.toLowerCase().equals("ack")) {
 						int b1 = packetNumber / 256;
 						int b2 = packetNumber % 256;
@@ -355,17 +359,19 @@ public class TFTPSim {
 					}
 				}
 			} else if (type == 3) {
-				System.out.print("Enter the packet you want to send from the wrong port: ACK or DATA \n");
+				System.out.print("Enter the packet you want to send from the wrong port: ACK or DATA or ERROR \n");
 				packetType = scan.nextLine();
 				scanning = true;
-				while (scanning) {
-					try {
-						System.out.print("Enter the block number of the packet: \n");
-						packetNumber = Integer.parseInt(scan.nextLine());
-						scanning = false;
-					} catch (Exception InputMismatchException) {
-						System.out.println("Invalid input");
-						continue;
+				if (packetType.toLowerCase().equals("ack") || packetType.toLowerCase().equals("data")) {
+					while (scanning) {
+						try {
+							System.out.print("Enter the block number of the packet: \n");
+							packetNumber = Integer.parseInt(scan.nextLine());
+							scanning = false;
+						} catch (Exception InputMismatchException) {
+							System.out.println("Invalid input");
+							continue;
+						}
 					}
 				}
 				if (packetType.toLowerCase().equals("ack")) {
@@ -376,6 +382,8 @@ public class TFTPSim {
 					int b1 = packetNumber / 256;
 					int b2 = packetNumber % 256;
 					byteNumber = "03" + "." + Integer.toString(b1) + "." + Integer.toString(b2);
+				} else if (packetType.toLowerCase().equals("error")) {
+					byteNumber = "05";
 				} else {
 					System.out.println("Invalid input");
 					continue;
@@ -394,6 +402,7 @@ public class TFTPSim {
 				continue;
 			}
 		}
+
 	}
 
 	public int getClientPort() {
@@ -407,7 +416,7 @@ public class TFTPSim {
 	public int getServerPort() {
 		return serverPort;
 	}
-	
+
 	public void setServerPort(int newServerPort) {
 		serverPort = newServerPort;
 	}
@@ -415,12 +424,11 @@ public class TFTPSim {
 	public InetAddress getClientAddress() {
 		return clientAddress;
 	}
-	
+
 	public void setClientAddress(InetAddress newClientAddress) {
 		clientAddress = newClientAddress;
 	}
 
-	
 	public static void main(String args[]) {
 		sim = new TFTPSim();
 		errors = new HashMap<>(); // stores a key-value pair: the unique code based on block
@@ -511,6 +519,9 @@ class ReceivingAndSendingThread extends Thread {
 					break;
 				case 4:
 					serverByteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
+					break;
+				case 5:
+					serverByteNumber = "05";
 					break;
 				}
 
@@ -669,6 +680,9 @@ class ReceivingAndSendingThread extends Thread {
 				case 4:
 					clientByteNumber = "04" + "." + Integer.toString(data[2]) + "." + Integer.toString(data[3]);
 					break;
+				case 5:
+					clientByteNumber = "05";
+					break;
 				}
 				System.out.println("current: " + clientByteNumber);
 
@@ -734,8 +748,7 @@ class ReceivingAndSendingThread extends Thread {
 								e.printStackTrace();
 								System.exit(1);
 							}
-						}
-						else {
+						} else {
 							SendToServer(data);
 						}
 						break;
@@ -837,10 +850,10 @@ class ReceivingAndSendingThread extends Thread {
 			return incomingData;
 			// System.exit(1);
 		}
-		
-		//Set client address for future transfers
+
+		// Set client address for future transfers
 		Parent.setClientAddress(receivePacket.getAddress());
-		
+
 		byte[] data = new byte[receivePacket.getLength()];
 		for (int i = 0; i < receivePacket.getLength(); i++) {
 			data[i] = incomingData[i];
@@ -933,9 +946,8 @@ class ReceivingAndSendingThread extends Thread {
 	}
 
 	public void SendToClient(byte[] data) {
-		
-		sendPacket = new DatagramPacket(data, data.length, Parent.getClientAddress(), Parent.getClientPort());
 
+		sendPacket = new DatagramPacket(data, data.length, Parent.getClientAddress(), Parent.getClientPort());
 
 		System.out.print("Simulator: sending to Client: ");
 		if (data[1] == 3)
