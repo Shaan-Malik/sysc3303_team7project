@@ -132,10 +132,12 @@ public class TFTPServerThread extends Thread {
 				
 				output = new FileOutputStream(destinationFile);
 			} catch (FileNotFoundException e1) {
-				sendErrorPacket(6, "File "+serverDirectory+"/"+filename+" already exists", receivePacket.getPort(), receivePacket.getAddress());
-			} catch (SecurityException e1) {
-				sendErrorPacket(2, "File "+serverDirectory+"/"+filename+" can't be written to", receivePacket.getPort(), receivePacket.getAddress());
-			}
+				if(e1.getMessage().contains("Access is denied")) {
+					sendErrorPacket(2, "File "+serverDirectory+"/"+filename+" can't be written to", receivePacket.getPort(), receivePacket.getAddress());
+				}else {
+					sendErrorPacket(6, "File "+serverDirectory+"/"+filename+" already exists", receivePacket.getPort(), receivePacket.getAddress());
+				}
+			} 
 		}
 
 		System.out.println("Begin Sending and Receiving Data\n");
